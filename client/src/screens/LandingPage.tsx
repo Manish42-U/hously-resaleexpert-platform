@@ -738,7 +738,7 @@ const HouslyHero = ({
   if (!visible) return null;
 
   return (
-    <View className="px-5 pt-6 pb-10">
+    <View className="px-5 pt-16 pb-10">
       <Animated.View
         style={{
           opacity: opacityAnim,
@@ -1756,7 +1756,7 @@ export default function LandingPage() {
       <Animated.View
         style={{
           position: 'absolute',
-          top: 40,
+          top: 72,
           left: 16,
           zIndex: 40,
           opacity: logoOpacity,

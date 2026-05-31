@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { NativeModules, Platform } from 'react-native';
 
-const PRODUCTION_API_BASE_URL = 'https://resaleexpert.in';
+const PRODUCTION_API_BASE_URL = 'https://hously-realty-api.onrender.com';
 
 const getDevServerHost = () => {
   const scriptURL = NativeModules.SourceCode?.scriptURL as string | undefined;

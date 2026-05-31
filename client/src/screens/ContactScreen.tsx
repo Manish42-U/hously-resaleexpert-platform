@@ -299,7 +299,9 @@ const ContactScreen = ({
                     </Text>
                     <TextInput
                       className="border border-orange-300 rounded-xl px-4 py-3 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30"
+                      style={{ color: '#111827' }}
                       placeholder="Enter your full name"
+                      placeholderTextColor="#9CA3AF"
                       value={form.name}
                       onChangeText={val => setForm({ ...form, name: val })}
                     />
@@ -310,7 +312,9 @@ const ContactScreen = ({
                     </Text>
                     <TextInput
                       className="border border-orange-300 rounded-xl px-4 py-3 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30"
+                      style={{ color: '#111827' }}
                       placeholder="Enter your phone number"
+                      placeholderTextColor="#9CA3AF"
                       keyboardType="phone-pad"
                       value={form.phone}
                       onChangeText={val => setForm({ ...form, phone: val })}
@@ -324,7 +328,9 @@ const ContactScreen = ({
                   </Text>
                   <TextInput
                     className="border border-orange-300 rounded-xl px-4 py-3 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30"
+                    style={{ color: '#111827' }}
                     placeholder="Enter your email address"
+                    placeholderTextColor="#9CA3AF"
                     keyboardType="email-address"
                     autoCapitalize="none"
                     value={form.email}
@@ -384,7 +390,9 @@ const ContactScreen = ({
                   </Text>
                   <TextInput
                     className="border border-orange-300 rounded-xl px-4 py-3 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30"
+                    style={{ color: '#111827' }}
                     placeholder="What can we help you with?"
+                    placeholderTextColor="#9CA3AF"
                     value={form.subject}
                     onChangeText={val => setForm({ ...form, subject: val })}
                   />
@@ -396,7 +404,9 @@ const ContactScreen = ({
                   </Text>
                   <TextInput
                     className="border border-orange-300 rounded-xl px-4 py-3 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30 min-h-[100px] md:min-h-[120px]"
+                    style={{ color: '#111827' }}
                     placeholder="Tell us more about your requirements..."
+                    placeholderTextColor="#9CA3AF"
                     multiline
                     textAlignVertical="top"
                     value={form.message}
