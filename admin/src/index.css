@@ -1,0 +1,223 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+:root {
+  --brand: #E6761D;
+  --brand-dark: #c96216;
+  --brand-light: #f9a257;
+  --glow-orange: rgba(230,118,29,0.4);
+  --glow-blue: rgba(59,130,246,0.4);
+  --glow-purple: rgba(139,92,246,0.4);
+  --glow-emerald: rgba(16,185,129,0.4);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── PREMIUM SCROLLBAR ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #E6761D, #c96216); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #E6761D; }
+
+/* ─── CUSTOM SCROLLBAR CLASS ─── */
+.scrollbar-custom::-webkit-scrollbar { width: 5px; }
+.scrollbar-custom::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+.scrollbar-custom::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #E6761D, #c96216); border-radius: 10px; }
+.scrollbar-custom::-webkit-scrollbar-thumb:hover { background: #E6761D; }
+
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* ─── GLASS MORPHISM ─── */
+.glass {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.glass-white {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+
+/* ─── GLOW UTILITIES ─── */
+.glow-orange { box-shadow: 0 0 30px var(--glow-orange); }
+.glow-blue   { box-shadow: 0 0 30px var(--glow-blue); }
+.glow-purple { box-shadow: 0 0 30px var(--glow-purple); }
+.glow-emerald{ box-shadow: 0 0 30px var(--glow-emerald); }
+
+/* ─── SHIMMER ANIMATION ─── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.shimmer-text {
+  background: linear-gradient(90deg, #E6761D, #f9a257, #E6761D);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ─── FLOATING ANIMATION ─── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+.float { animation: float 4s ease-in-out infinite; }
+
+/* ─── PULSE RING ─── */
+@keyframes pulse-ring {
+  0%   { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ─── GRADIENT BORDER ─── */
+.gradient-border {
+  position: relative;
+  background-clip: padding-box;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, #E6761D, #8b5cf6, #3b82f6);
+  border-radius: inherit;
+  z-index: -1;
+}
+
+/* ─── INPUT FOCUS STYLES ─── */
+.input-premium {
+  width: 100%;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.25s ease;
+  background: white;
+}
+.input-premium:focus {
+  border-color: #E6761D;
+  box-shadow: 0 0 0 4px rgba(230,118,29,0.12);
+}
+
+/* ─── CARD HOVER LIFT ─── */
+.card-lift {
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+}
+
+/* ─── TOGGLE SWITCH ─── */
+.toggle-track {
+  width: 44px; height: 24px;
+  border-radius: 999px;
+  transition: background 0.3s ease;
+  position: relative;
+  cursor: pointer;
+}
+.toggle-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 3px; left: 3px;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* ─── RANGE SLIDER ─── */
+input[type="range"] {
+  appearance: none;
+  height: 6px;
+  border-radius: 99px;
+  background: #e5e7eb;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #E6761D, #c96216);
+  box-shadow: 0 2px 8px rgba(230,118,29,0.5);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 16px rgba(230,118,29,0.6);
+}
+
+/* ─── ANIMATED GRADIENT BG ─── */
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animated-gradient {
+  background-size: 400% 400%;
+  animation: gradientShift 8s ease infinite;
+}
+
+/* ─── RIPPLE EFFECT ─── */
+.ripple { position: relative; overflow: hidden; }
+.ripple::after {
+  content: '';
+  position: absolute;
+  width: 100%; height: 100%;
+  top: 0; left: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+  transform: scale(0);
+  opacity: 0;
+  transition: transform 0.5s, opacity 0.5s;
+}
+.ripple:active::after { transform: scale(2); opacity: 1; transition: 0s; }
+
+/* ─── STATUS BADGE PULSE ─── */
+.badge-live { position: relative; }
+.badge-live::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #10b981;
+  animation: pulse-ring 2s ease-out infinite;
+  opacity: 0.5;
+}
+
+/* ─── PAGE TRANSITIONS ─── */
+.page-enter { animation: pageIn 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── STAT NUMBER COUNTER ─── */
+.stat-value {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
