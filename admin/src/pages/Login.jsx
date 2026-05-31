@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Eye, Lock, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
 import { authService, getErrorMessage } from '../services/api';
 
@@ -10,6 +10,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -27,7 +28,7 @@ const Login = () => {
 
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(user));
-      navigate('/');
+      navigate(location.state?.from || '/', { replace: true });
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -107,8 +108,8 @@ const Login = () => {
             <div className="h-px flex-1 bg-[#ece8e0]" />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-            <Link className="text-[#1B4B72] hover:text-[#E8720C]" to="/">
-              Back to dashboard
+            <Link className="text-[#1B4B72] hover:text-[#E8720C]" to="/login">
+              Admin access only
             </Link>
             <Link className="font-semibold text-[#E8720C]" to="/register">
               Register admin

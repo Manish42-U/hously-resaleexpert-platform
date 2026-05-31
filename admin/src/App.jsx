@@ -15,11 +15,32 @@ import Administrator from './pages/Administrator';
 import Leads from './pages/Leads';
 import Users from './pages/Users';
 
+const AUTH_ROLES = ['admin', 'manager', 'agent'];
+
+const getSessionUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}');
+  } catch {
+    return {};
+  }
+};
+
+const hasAdminSession = () => {
+  const token = localStorage.getItem('token');
+  const user = getSessionUser();
+  return Boolean(token && AUTH_ROLES.includes(user?.role));
+};
+
 const AppContent = () => {
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const isAuthenticated = hasAdminSession();
 
   if (isAuthPage) {
+    if (isAuthenticated) {
+      return <Navigate to="/" replace />;
+    }
+
     return (
       <div className="flex bg-gray-50 min-h-screen justify-center items-center">
         <Routes>
@@ -28,6 +49,10 @@ const AppContent = () => {
         </Routes>
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
   return (
