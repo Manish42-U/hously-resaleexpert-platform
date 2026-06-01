@@ -151,7 +151,7 @@ const AdminHeader = () => {
     <header className="sticky top-0 z-40 border-b border-gray-200/70 bg-white/95 backdrop-blur-xl shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
       <div className="flex h-16 items-center justify-between gap-3 px-3 sm:h-20 sm:px-5 lg:px-8 lg:gap-5">
         <div className="flex items-center gap-4">
-          <NavLink to="/" className="flex items-center gap-2.5 shrink-0 group">
+          <NavLink to="/" className="hidden items-center gap-2.5 shrink-0 group sm:flex">
             <img
               src="https://resaleexpert.in/uploads/system/company_logo-1759471014698-84089067-Resale-Expert-Logo.png"
               alt="ResaleExpert"
@@ -161,6 +161,10 @@ const AdminHeader = () => {
           <div className="hidden md:flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 transition-all hover:border-orange-200 hover:bg-orange-50">
             <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-300" />
             <span className="text-sm font-black text-slate-700 truncate max-w-[240px]">{PAGE_TITLES[location.pathname] || 'Dashboard'}</span>
+          </div>
+          <div className="min-w-0 sm:hidden">
+            <p className="truncate text-sm font-black text-slate-900">{PAGE_TITLES[location.pathname] || 'Dashboard'}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ResaleExpert Admin</p>
           </div>
         </div>
 

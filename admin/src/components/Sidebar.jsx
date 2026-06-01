@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 const Sidebar = () => {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [time, setTime] = useState(new Date());
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -65,6 +66,7 @@ const Sidebar = () => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    setMobileOpen(false);
     navigate('/login');
   };
 
@@ -74,8 +76,15 @@ const Sidebar = () => {
     <>
       <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a] shadow-xl shadow-slate-950/15 lg:hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#E6761D]">{greeting.text}</p>
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/8 text-white ring-1 ring-white/10 transition active:scale-95"
+            aria-label="Open menu"
+          >
+            <ChevronRight size={21} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#E6761D]">Admin Console</p>
             <p className="truncate text-sm font-black capitalize text-white">{userName}</p>
           </div>
           <button
@@ -86,25 +95,84 @@ const Sidebar = () => {
             <LogOut size={18} />
           </button>
         </div>
-        <nav className="flex gap-2 overflow-x-auto px-3 pb-3 scrollbar-custom">
-          {flatMenuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => `
-                flex min-w-max items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black transition
-                ${isActive
-                  ? 'bg-[#E6761D] text-white shadow-lg shadow-[#E6761D]/25'
-                  : 'bg-white/6 text-slate-300 hover:bg-white/12 hover:text-white'
-                }
-              `}
-            >
-              <item.icon size={15} />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
       </div>
+
+      {mobileOpen && (
+        <button
+          className="fixed inset-0 z-[70] bg-slate-950/55 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close menu backdrop"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-[80] flex w-[84vw] max-w-[330px] flex-col bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#0f172a] shadow-2xl shadow-black/40 transition-transform duration-300 lg:hidden ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="border-b border-white/10 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#E6761D]">{greeting.text}</p>
+              <p className="truncate text-base font-black capitalize text-white">{userName}</p>
+              <p className="mt-0.5 truncate text-xs font-semibold text-slate-400">{userRole}</p>
+            </div>
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/8 text-slate-200"
+              aria-label="Close menu"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 py-4">
+          {menuGroups.map((group) => (
+            <div key={group.label} className="mb-5">
+              <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{group.label}</p>
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) => `
+                      flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-black transition
+                      ${isActive
+                        ? 'bg-gradient-to-r from-[#E6761D] to-orange-500 text-white shadow-lg shadow-[#E6761D]/25'
+                        : 'text-slate-300 hover:bg-white/8 hover:text-white'
+                      }
+                    `}
+                  >
+                    <item.icon size={19} />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {item.badge && <span className="rounded-full bg-white/14 px-2 py-0.5 text-[10px]">{item.badge}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t border-white/10 p-4">
+          <div className="mb-3 rounded-2xl bg-white/6 p-3 ring-1 ring-white/10">
+            <div className="flex items-center gap-3">
+              <Activity size={17} className="text-emerald-400" />
+              <div>
+                <p className="text-sm font-black text-slate-100">System Online</p>
+                <p className="text-[10px] font-semibold text-slate-500">Live admin workspace</p>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500/15 px-4 py-3 text-sm font-black text-red-300"
+          >
+            <LogOut size={17} /> Sign Out
+          </button>
+        </div>
+      </aside>
 
       <aside
         className={`fixed left-0 top-0 z-50 hidden h-screen transition-all duration-500 ease-out lg:flex flex-col

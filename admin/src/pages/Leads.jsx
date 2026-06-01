@@ -258,9 +258,9 @@ const Leads = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 pb-10">
       {/* HEADER */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-gray-200/60 shadow-sm">
-        <div className="px-6 lg:px-8 py-4">
+        <div className="px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#E6761D] to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
                 <Users size={20} className="text-white" />
               </div>
@@ -279,7 +279,7 @@ const Leads = () => {
                   placeholder="Search queries..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-[#E6761D] focus:shadow-[0_0_0_3px_rgba(230,118,29,0.1)] transition-all outline-none w-56"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-4 text-sm outline-none transition-all focus:border-[#E6761D] focus:bg-white focus:shadow-[0_0_0_3px_rgba(230,118,29,0.1)] sm:w-56"
                 />
               </div>
 
@@ -305,7 +305,7 @@ const Leads = () => {
         </div>
 
         {/* Stats Bar */}
-        <div className="px-6 lg:px-8 pb-4 flex gap-4 overflow-x-auto">
+        <div className="flex gap-3 overflow-x-auto px-4 pb-4 sm:px-6 lg:px-8">
           {[
             { label: 'Total Queries', value: stats.total, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Hot Leads', value: stats.hot, icon: Flame, color: 'text-red-600', bg: 'bg-red-50' },
@@ -387,8 +387,8 @@ const Leads = () => {
 
       {/* LIST VIEW */}
       {view === 'list' && (
-        <div className="px-6 lg:px-8 py-6">
-          <div className="bg-white rounded-3xl border border-gray-200/60 shadow-sm overflow-hidden">
+        <div className="px-4 py-6 sm:px-6 lg:px-8">
+          <div className="overflow-x-auto rounded-3xl border border-gray-200/60 bg-white shadow-sm">
             <table className="w-full text-left">
               <thead className="bg-gray-50/80 border-b border-gray-100">
                 <tr>
