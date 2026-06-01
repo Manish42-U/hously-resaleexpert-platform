@@ -108,12 +108,9 @@ const Login = () => {
             <span className="text-xs tracking-wide text-[#c0bab0]">secure login</span>
             <div className="h-px flex-1 bg-[#ece8e0]" />
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <div className="flex items-center justify-center text-sm">
             <Link className="text-[#1B4B72] hover:text-[#E8720C]" to="/login">
               Admin access only
-            </Link>
-            <Link className="font-semibold text-[#E8720C]" to="/register">
-              Register admin
             </Link>
           </div>
         </div>
