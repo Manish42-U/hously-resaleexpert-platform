@@ -21,6 +21,7 @@ async function init() {
     await ensureUserRoleColumn();
     await ensureBlogAuthorColumn();
     await ensurePropertyColumns();
+    await ensurePaymentColumns();
     await backfillPropertyData();
     await backfillNearbyPlacesData();
     await backfillBlogData();
@@ -29,6 +30,37 @@ async function init() {
   } catch (error) {
     console.error('Failed to initialize database:', error);
     throw error;
+  }
+}
+
+async function ensurePaymentColumns() {
+  const [tables] = await db.execute(
+    `SELECT TABLE_NAME
+     FROM INFORMATION_SCHEMA.TABLES
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'payment_transactions'`,
+  );
+
+  if (tables.length === 0) return;
+
+  const columns = [
+    ['billing_cycle', 'VARCHAR(50)'],
+  ];
+
+  for (const [name, definition] of columns) {
+    const [existing] = await db.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'payment_transactions'
+         AND COLUMN_NAME = ?`,
+      [name],
+    );
+
+    if (existing.length === 0) {
+      console.log(`Adding payment_transactions.${name}`);
+      await db.execute(`ALTER TABLE payment_transactions ADD COLUMN ${name} ${definition}`);
+    }
   }
 }
 

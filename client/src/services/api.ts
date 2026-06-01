@@ -166,6 +166,7 @@ export const paymentService = {
     receipt?: string;
     amount?: number;
     label?: string;
+    billingCycle?: string;
   }) => paymentApi.post('/payments/razorpay/order', data),
   createRazorpayPaymentLink: (data: {
     plan: string;
@@ -175,6 +176,7 @@ export const paymentService = {
     email?: string;
     amount?: number;
     label?: string;
+    billingCycle?: string;
   }) => paymentApi.post('/payments/razorpay/link', data),
   createRazorpayPaymentLinkFallback: (data: {
     plan: string;
@@ -184,6 +186,7 @@ export const paymentService = {
     email?: string;
     amount?: number;
     label?: string;
+    billingCycle?: string;
   }) => paymentApi.post('/razorpay/link', data),
 };
 

@@ -390,6 +390,7 @@ const PropertyDetailScreen = ({
     const payload = {
       plan: selectedPlan,
       propertyCode: code,
+      billingCycle: 'one-time',
     };
 
     try {

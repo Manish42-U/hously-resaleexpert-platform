@@ -43,7 +43,7 @@ const Sidebar = () => {
     {
       label: 'Management',
       items: [
-        { label: 'Leads', icon: Target, path: '/leads', badge: 'Hot' },
+        { label: 'Queries & Leads', icon: Target, path: '/leads', badge: 'Hot' },
         { label: 'CMS', icon: FileText, path: '/cms' },
         { label: 'CRM', icon: Database, path: '/crm' },
         { label: 'WhatsApp CRM', icon: Phone, path: '/whatsapp-crm' },

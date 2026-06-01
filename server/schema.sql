@@ -168,6 +168,7 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
   payment_url VARCHAR(700),
   plan VARCHAR(100) NOT NULL,
   label VARCHAR(255),
+  billing_cycle VARCHAR(50),
   property_code VARCHAR(100),
   customer_name VARCHAR(150),
   customer_email VARCHAR(255),

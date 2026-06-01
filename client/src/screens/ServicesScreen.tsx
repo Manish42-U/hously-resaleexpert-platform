@@ -1409,6 +1409,7 @@ const ServicesScreen = ({
         plan,
         amount,
         label,
+        billingCycle: 'one-time',
         propertyCode: 'services',
       });
       const url = response.data?.data?.url;

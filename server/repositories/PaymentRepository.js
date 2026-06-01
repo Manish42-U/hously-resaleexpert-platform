@@ -9,10 +9,10 @@ const normalizeMetadata = (metadata) => {
 exports.create = async (data) => {
   const [result] = await db.execute(
     `INSERT INTO payment_transactions
-      (provider, provider_order_id, provider_payment_link_id, payment_url, plan, label,
+      (provider, provider_order_id, provider_payment_link_id, payment_url, plan, label, billing_cycle,
        property_code, customer_name, customer_email, customer_phone, amount, currency,
        status, source, metadata)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.provider || 'razorpay',
       data.provider_order_id || null,
@@ -20,6 +20,7 @@ exports.create = async (data) => {
       data.payment_url || null,
       data.plan || 'unknown',
       data.label || null,
+      data.billing_cycle || null,
       data.property_code || null,
       data.customer_name || null,
       data.customer_email || null,

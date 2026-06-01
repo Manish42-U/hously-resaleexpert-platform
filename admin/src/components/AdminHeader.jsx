@@ -10,7 +10,7 @@ const PAGE_TITLES = {
   '/': 'Overview Dashboard',
   '/manager-dashboard': 'Manager Dashboard',
   '/agent-dashboard': 'Agent Dashboard',
-  '/leads': 'Leads Management',
+  '/leads': 'Queries & Leads',
   '/cms': 'Content Management',
   '/crm': 'Customer Relations',
   '/whatsapp-crm': 'WhatsApp CRM',

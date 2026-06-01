@@ -93,7 +93,7 @@ const mapContactToLead = (contact) => {
     email: contact.email || '',
     source: meta.source || contact.subject || 'Website',
     budget: contact.budget || '',
-    location: meta.location || '',
+    location: meta.location || contact.subject || '',
     interest: contact.property_type || 'General enquiry',
     stage: contact.status || 'new',
     priority: meta.priority || priorityFromScore(score),
@@ -102,7 +102,7 @@ const mapContactToLead = (contact) => {
     avatar: (contact.name || 'UL').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
     color: 'from-slate-400 to-slate-500',
     date: contact.created_at ? String(contact.created_at).slice(0, 10) : '',
-    lastContact: contact.last_contacted_at ? 'Recently contacted' : 'New enquiry',
+    lastContact: contact.last_contacted_at ? 'Recently contacted' : 'New query',
     notes: meta.notes || contact.message || '',
   }
 }
@@ -145,7 +145,10 @@ const Leads = () => {
       const matchSearch = !search || 
         lead.name.toLowerCase().includes(search.toLowerCase()) ||
         lead.phone.includes(search) ||
-        lead.location.toLowerCase().includes(search.toLowerCase())
+        lead.location.toLowerCase().includes(search.toLowerCase()) ||
+        lead.email.toLowerCase().includes(search.toLowerCase()) ||
+        lead.interest.toLowerCase().includes(search.toLowerCase()) ||
+        lead.notes.toLowerCase().includes(search.toLowerCase())
       const matchStage = filterStage === 'all' || lead.stage === filterStage
       const matchPriority = filterPriority === 'all' || lead.priority === filterPriority
       return matchSearch && matchStage && matchPriority
@@ -158,7 +161,7 @@ const Leads = () => {
     total: leads.length,
     hot: leads.filter(l => l.priority === 'hot').length,
     closed: leads.filter(l => l.stage === 'closed').length,
-    conversion: Math.round((leads.filter(l => l.stage === 'closed').length / leads.length) * 100),
+    conversion: leads.length ? Math.round((leads.filter(l => l.stage === 'closed').length / leads.length) * 100) : 0,
   }), [leads])
 
   const openAddModal = () => {
@@ -262,8 +265,8 @@ const Leads = () => {
                 <Users size={20} className="text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-black text-gray-900">Leads Management</h1>
-                <p className="text-gray-500 text-sm">Track, nurture & convert your real estate leads</p>
+                <h1 className="text-2xl font-black text-gray-900">Queries & Leads</h1>
+                <p className="text-gray-500 text-sm">Every client contact form, property message and enquiry appears here</p>
               </div>
             </div>
 
@@ -273,7 +276,7 @@ const Leads = () => {
                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search leads..."
+                  placeholder="Search queries..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-[#E6761D] focus:shadow-[0_0_0_3px_rgba(230,118,29,0.1)] transition-all outline-none w-56"
@@ -304,7 +307,7 @@ const Leads = () => {
         {/* Stats Bar */}
         <div className="px-6 lg:px-8 pb-4 flex gap-4 overflow-x-auto">
           {[
-            { label: 'Total Leads', value: stats.total, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Total Queries', value: stats.total, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Hot Leads', value: stats.hot, icon: Flame, color: 'text-red-600', bg: 'bg-red-50' },
             { label: 'Deals Closed', value: stats.closed, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
             { label: 'Conversion Rate', value: `${stats.conversion}%`, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },

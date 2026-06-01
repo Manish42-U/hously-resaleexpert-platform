@@ -1140,8 +1140,8 @@ const WorkspacePage = ({ module = 'leads' }) => {
             <div className="hidden grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_1fr] gap-3 bg-slate-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 md:grid">
               <span>Plan</span>
               <span>Amount</span>
+              <span>Cycle</span>
               <span>Status</span>
-              <span>Source</span>
               <span>Created</span>
             </div>
             <div className="divide-y divide-slate-100">
@@ -1152,8 +1152,8 @@ const WorkspacePage = ({ module = 'leads' }) => {
                     <p className="mt-1 truncate text-xs font-semibold text-slate-500">{payment.property_code || payment.provider_payment_link_id || payment.provider_order_id || 'General payment'}</p>
                   </div>
                   <p className="text-sm font-black text-slate-900">{formatCurrency(payment.amount || 0)}</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-500">{payment.billing_cycle || 'one-time'}</p>
                   <span className="w-max rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase text-blue-700">{payment.status || 'created'}</span>
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{payment.source || payment.provider || 'client'}</p>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-xs font-semibold text-slate-500">{formatDate(payment.created_at)}</p>
                     {payment.payment_url && (

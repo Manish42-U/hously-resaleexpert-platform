@@ -62,7 +62,7 @@ const Dashboard = () => {
     { label: 'Total Properties', value: summary?.stats?.properties ?? 0, icon: Home, color: '#3B82F6', trend: '+12%', target: 1000 },
     { label: 'Active Blogs', value: summary?.stats?.blogs ?? 0, icon: BookOpen, color: '#10B981', trend: '+5%', target: 500 },
     { label: 'Total Users', value: summary?.stats?.users ?? 0, icon: Users, color: '#8B5CF6', trend: '+18%', target: 5000 },
-    { label: 'New Enquiries', value: summary?.stats?.contacts ?? 0, icon: MessageSquare, color: '#F59E0B', trend: '+24%', target: 400 },
+    { label: 'Client Queries', value: summary?.stats?.contacts ?? 0, icon: MessageSquare, color: '#F59E0B', trend: '+24%', target: 400 },
     { label: 'Featured Listings', value: summary?.stats?.featuredProperties ?? 0, icon: Star, color: '#EF4444', trend: '+2%', target: 200 }
   ]
 

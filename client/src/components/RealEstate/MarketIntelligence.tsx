@@ -320,6 +320,7 @@ const MarketIntelligence = () => {
       plan: planKey,
       amount,
       label,
+      billingCycle,
       propertyCode: 'market-intelligence',
     };
 
