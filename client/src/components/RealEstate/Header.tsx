@@ -22,7 +22,7 @@ interface HeaderProps {
   onTabChange: (tab: string) => void;
 }
 
-const ADMIN_LOGIN_URL = 'https://admin.resaleexpert.in/login';
+const ADMIN_LOGIN_URL = 'https://hously-resaleexpert-admin.vercel.app/login';
 
 const Header = ({ isScrolled = false, activeTab, onTabChange }: HeaderProps) => {
   const insets = useSafeAreaInsets();
