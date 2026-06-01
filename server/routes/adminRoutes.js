@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const paymentController = require('../controllers/paymentController');
 
 router.get('/summary', adminController.getSummary);
 router.get('/counts', adminController.getCounts);
 router.get('/workspace', adminController.getWorkspace);
+router.get('/payments', paymentController.getPaymentHistory);
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
 router.get('/users', adminController.getUsers);

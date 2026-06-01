@@ -260,6 +260,7 @@ const WorkspacePage = ({ module = 'leads' }) => {
     [dismissedNotifIds, readNotifIds, workspace?.notifications]
   )
   const reports = useMemo(() => workspace?.reports || [], [workspace?.reports])
+  const payments = useMemo(() => workspace?.payments || workspace?.subscriptions || [], [workspace?.payments, workspace?.subscriptions])
   const users = useMemo(() => workspace?.users || [], [workspace?.users])
   const properties = useMemo(() => workspace?.properties || [], [workspace?.properties])
   const blogs = useMemo(() => workspace?.blogs || [], [workspace?.blogs])
@@ -1063,6 +1064,7 @@ const WorkspacePage = ({ module = 'leads' }) => {
       { label: 'Reports Ready', value: reports.filter((report) => report.status === 'ready').length, icon: FileText, tone: 'emerald' },
       { label: 'Inventory Rows', value: stats.properties || 0, icon: Building2, tone: 'blue' },
       { label: 'Lead Records', value: stats.contacts || 0, icon: Target, tone: 'orange' },
+      { label: 'Payments', value: stats.payments || payments.length, icon: Database, tone: 'slate' },
     ]
 
     return (
@@ -1119,6 +1121,53 @@ const WorkspacePage = ({ module = 'leads' }) => {
             </div>
           ))}
         </div>
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-black text-slate-900">Payment & Subscription History</h2>
+              <p className="mt-1 text-sm font-semibold text-slate-500">
+                Razorpay links and subscription purchases created from the client.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-right">
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Created Value</p>
+              <p className="text-lg font-black text-emerald-900">{formatCurrency(stats.paymentRevenue || 0)}</p>
+            </div>
+          </div>
+
+          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-100">
+            <div className="hidden grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_1fr] gap-3 bg-slate-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 md:grid">
+              <span>Plan</span>
+              <span>Amount</span>
+              <span>Status</span>
+              <span>Source</span>
+              <span>Created</span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {payments.slice(0, 12).map((payment) => (
+                <div key={payment.id} className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_1fr] md:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-slate-900">{payment.label || payment.plan || 'Subscription'}</p>
+                    <p className="mt-1 truncate text-xs font-semibold text-slate-500">{payment.property_code || payment.provider_payment_link_id || payment.provider_order_id || 'General payment'}</p>
+                  </div>
+                  <p className="text-sm font-black text-slate-900">{formatCurrency(payment.amount || 0)}</p>
+                  <span className="w-max rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase text-blue-700">{payment.status || 'created'}</span>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{payment.source || payment.provider || 'client'}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold text-slate-500">{formatDate(payment.created_at)}</p>
+                    {payment.payment_url && (
+                      <a href={payment.payment_url} target="_blank" rel="noreferrer" className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white hover:bg-[#E6761D]">
+                        Open
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {payments.length === 0 && <div className="p-8"><EmptyState label="No payment records yet. New Razorpay links will appear here." /></div>}
+            </div>
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl">

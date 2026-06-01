@@ -1807,14 +1807,21 @@ const PropertyDetailScreen = ({
                       </Text>
                     </View>
                     <Slider
-                      containerStyle={{ width: '100%', height: 40 }}
+                      containerStyle={{ width: '100%', height: 44 }}
+                      trackStyle={{ height: 6, borderRadius: 999 }}
+                      thumbStyle={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        borderWidth: 3,
+                        borderColor: '#FFFFFF',
+                      }}
                       minimumValue={7}
                       maximumValue={12}
-                      step={0.1}
                       value={emiInterestRate}
                       onValueChange={value =>
                         setEmiInterestRate(
-                          Array.isArray(value) ? value[0] : value,
+                          Number((Array.isArray(value) ? value[0] : value).toFixed(2)),
                         )
                       }
                       minimumTrackTintColor="#E6761D"

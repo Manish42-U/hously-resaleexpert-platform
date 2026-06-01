@@ -1,4 +1,5 @@
 const axios = require('axios');
+const PaymentRepository = require('../repositories/PaymentRepository');
 
 const PLAN_AMOUNTS = {
   '5views': 299,
@@ -60,6 +61,25 @@ exports.createRazorpayOrder = async (req, res) => {
       },
     );
 
+    const savedPayment = await PaymentRepository.create({
+      provider: 'razorpay',
+      provider_order_id: response.data.id,
+      plan,
+      label: req.body.label || `${plan} plan`,
+      property_code: req.body.propertyCode || '',
+      amount,
+      currency: 'INR',
+      status: response.data.status || 'created',
+      source: req.body.source || 'checkout',
+      metadata: {
+        receipt,
+        razorpay: response.data,
+      },
+    }).catch((error) => {
+      console.error('payment history save error:', error.message);
+      return null;
+    });
+
     return res.status(201).json({
       success: true,
       data: {
@@ -67,6 +87,7 @@ exports.createRazorpayOrder = async (req, res) => {
         order: response.data,
         plan,
         amount,
+        historyId: savedPayment?.id,
       },
     });
   } catch (error) {
@@ -126,6 +147,29 @@ exports.createRazorpayPaymentLink = async (req, res) => {
       },
     );
 
+    const savedPayment = await PaymentRepository.create({
+      provider: 'razorpay',
+      provider_payment_link_id: response.data.id,
+      payment_url: response.data.short_url,
+      plan,
+      label: req.body.label || `ResaleExpert ${plan}`,
+      property_code: propertyCode,
+      customer_name: req.body.name || null,
+      customer_email: req.body.email || null,
+      customer_phone: cleanPhone || null,
+      amount,
+      currency: 'INR',
+      status: response.data.status || 'created',
+      source: req.body.source || 'payment-link',
+      metadata: {
+        reference_id: response.data.reference_id,
+        razorpay: response.data,
+      },
+    }).catch((error) => {
+      console.error('payment history save error:', error.message);
+      return null;
+    });
+
     return res.status(201).json({
       success: true,
       data: {
@@ -133,6 +177,7 @@ exports.createRazorpayPaymentLink = async (req, res) => {
         url: response.data.short_url,
         plan,
         amount,
+        historyId: savedPayment?.id,
       },
     });
   } catch (error) {
@@ -140,6 +185,22 @@ exports.createRazorpayPaymentLink = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Could not create Razorpay payment link',
+    });
+  }
+};
+
+exports.getPaymentHistory = async (req, res) => {
+  try {
+    const payments = await PaymentRepository.findAll(req.query.limit);
+    return res.json({
+      success: true,
+      data: payments,
+    });
+  } catch (error) {
+    console.error('payment history error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Could not load payment history',
     });
   }
 };

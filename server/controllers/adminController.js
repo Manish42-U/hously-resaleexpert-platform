@@ -3,6 +3,7 @@ const ContactRepository = require('../repositories/ContactRepository');
 const PropertyRepository = require('../repositories/PropertyRepository');
 const UserRepository = require('../repositories/UserRepository');
 const WhatsAppRepository = require('../repositories/WhatsAppRepository');
+const PaymentRepository = require('../repositories/PaymentRepository');
 const AppSettingsService = require('../services/AppSettingsService');
 const crypto = require('crypto');
 
@@ -151,12 +152,14 @@ const buildTeamPerformance = (users, properties) => {
 
 exports.getSummary = async (req, res) => {
   try {
-    const [properties, blogs, contacts, users] = await Promise.all([
+    const [properties, blogs, contacts, users, payments] = await Promise.all([
       PropertyRepository.findAll(),
       BlogRepository.findAll(),
       ContactRepository.findAll(),
       UserRepository.findAll(),
+      PaymentRepository.findAll().catch(() => []),
     ]);
+    const paymentRevenue = payments.reduce((sum, payment) => sum + safeNumber(payment.amount), 0);
 
     return res.json({
       success: true,
@@ -165,6 +168,9 @@ exports.getSummary = async (req, res) => {
         blogs: blogs.length,
         contacts: contacts.length,
         users: users.length,
+        payments: payments.length,
+        subscriptions: payments.length,
+        paymentRevenue,
         featuredProperties: properties.filter((property) => property.featured).length,
         availableProperties: properties.filter((property) => property.status !== 'Sold Out').length,
       },
@@ -173,6 +179,7 @@ exports.getSummary = async (req, res) => {
         blogs: blogs.slice(0, 5),
         contacts: contacts.slice(0, 5),
         users: users.slice(0, 5),
+        payments: payments.slice(0, 5),
       },
     });
   } catch (error) {
@@ -323,13 +330,14 @@ exports.getCounts = async (req, res) => {
 
 exports.getWorkspace = async (req, res) => {
   try {
-    const [properties, blogs, contacts, users, whatsappContacts, settings] = await Promise.all([
+    const [properties, blogs, contacts, users, whatsappContacts, settings, payments] = await Promise.all([
       PropertyRepository.findAll(),
       BlogRepository.findAll(),
       ContactRepository.findAll(),
       UserRepository.findAll(),
       WhatsAppRepository.getAllContactsWithMessages().catch(() => []),
       AppSettingsService.getSettings(),
+      PaymentRepository.findAll().catch(() => []),
     ]);
 
     const totalValue = properties.reduce((sum, property) => sum + safeNumber(property.price), 0);
@@ -338,6 +346,9 @@ exports.getWorkspace = async (req, res) => {
     const soldProperties = properties.filter((property) => String(property.status || '').toLowerCase().includes('sold'));
     const visibleWhatsappContacts = settings.whatsappEnabled ? whatsappContacts : [];
     const unreadMessages = visibleWhatsappContacts.reduce((sum, contact) => sum + safeNumber(contact.unread_count), 0);
+    const paymentRevenue = payments.reduce((sum, payment) => sum + safeNumber(payment.amount), 0);
+    const paidPayments = payments.filter((payment) => String(payment.status || '').toLowerCase().includes('paid'));
+    const recentPayments = payments.slice(0, 8);
     const teamPerformance = buildTeamPerformance(users, properties);
 
     const leads = contacts.map((contact) => {
@@ -549,6 +560,17 @@ exports.getWorkspace = async (req, res) => {
         time: daysAgo(contact.last_message_at),
         created_at: contact.last_message_at,
       })),
+      ...recentPayments.slice(0, 4).map((payment) => ({
+        id: `payment-${payment.id}`,
+        category: 'Payments',
+        type: 'payment',
+        title: `Payment created: ${payment.label || payment.plan}`,
+        desc: `${currency(payment.amount)} · ${payment.status || 'created'}${payment.property_code ? ` · ${payment.property_code}` : ''}`,
+        priority: 'medium',
+        unread: true,
+        time: daysAgo(payment.created_at),
+        created_at: payment.created_at,
+      })),
       ...(settings.maintenanceMode ? [{
         id: 'system-maintenance',
         category: 'System',
@@ -594,6 +616,14 @@ exports.getWorkspace = async (req, res) => {
         status: contacts.length ? 'ready' : 'empty',
       },
       {
+        id: 'payment-history',
+        name: 'Payment & Subscription History',
+        description: `${payments.length} Razorpay payment records with ${currency(paymentRevenue)} total created value`,
+        metric: payments.length,
+        value: currency(paymentRevenue),
+        status: payments.length ? 'ready' : 'empty',
+      },
+      {
         id: 'content-health',
         name: 'Content Health',
         description: `${blogs.length} blogs and ${properties.filter((property) => property.featured).length} featured listings live in CMS`,
@@ -625,6 +655,10 @@ exports.getWorkspace = async (req, res) => {
           users: users.length,
           whatsappContacts: visibleWhatsappContacts.length,
           unreadMessages,
+          payments: payments.length,
+          subscriptions: payments.length,
+          paymentRevenue,
+          paidPaymentRevenue: paidPayments.reduce((sum, payment) => sum + safeNumber(payment.amount), 0),
           totalValue,
           conversionRate: properties.length ? Math.round((soldProperties.length / properties.length) * 100) : 0,
         },
@@ -633,6 +667,8 @@ exports.getWorkspace = async (req, res) => {
         contacts,
         users: users.map(({ password, ...user }) => user),
         whatsappContacts: visibleWhatsappContacts,
+        payments,
+        subscriptions: payments,
         settings,
         manager,
         agent,

@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://hously-realty-api.onrender.com/api'
 
 const api = axios.create({
   baseURL: API_URL,
@@ -117,6 +117,7 @@ export const adminService = {
   getSummary: () => api.get('/admin/summary'),
   getCounts: () => api.get('/admin/counts'),
   getWorkspace: () => api.get('/admin/workspace'),
+  getPayments: () => api.get('/admin/payments'),
   getSettings: () => api.get('/admin/settings'),
   updateSettings: (data) => api.put('/admin/settings', data),
   createUser: (data) => api.post('/admin/users', data),

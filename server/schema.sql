@@ -159,3 +159,28 @@ CREATE TABLE IF NOT EXISTS app_settings (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS payment_transactions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  provider VARCHAR(50) DEFAULT 'razorpay',
+  provider_order_id VARCHAR(120),
+  provider_payment_link_id VARCHAR(120),
+  payment_url VARCHAR(700),
+  plan VARCHAR(100) NOT NULL,
+  label VARCHAR(255),
+  property_code VARCHAR(100),
+  customer_name VARCHAR(150),
+  customer_email VARCHAR(255),
+  customer_phone VARCHAR(30),
+  amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  currency VARCHAR(10) DEFAULT 'INR',
+  status VARCHAR(50) DEFAULT 'created',
+  source VARCHAR(100) DEFAULT 'client',
+  metadata JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_payment_transactions_created_at (created_at),
+  INDEX idx_payment_transactions_status (status),
+  INDEX idx_payment_transactions_plan (plan),
+  INDEX idx_payment_transactions_property_code (property_code)
+);
