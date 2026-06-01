@@ -411,70 +411,12 @@ const PropertyDetailScreen = ({
       return;
     }
 
-    const plan = planDetails[selectedPlan];
-    if (Platform.OS !== 'web') {
-      setPaymentLoading(true);
-      try {
-        const linkResponse = await createPaymentLink();
-        const url = linkResponse.data?.data?.url;
-        if (!url) throw new Error('Payment link missing');
-        openExternalUrl(url, 'Could not open Razorpay payment.');
-      } catch (error: any) {
-        Alert.alert(
-          'Payment unavailable',
-          error?.response?.data?.message || 'Could not start Razorpay payment.',
-        );
-      } finally {
-        setPaymentLoading(false);
-      }
-      return;
-    }
-
     setPaymentLoading(true);
     try {
-      const [ready, orderResponse] = await Promise.all([
-        loadRazorpayScript(),
-        paymentService.createRazorpayOrder({
-          plan: selectedPlan,
-          propertyCode: code,
-        }),
-      ]);
-
-      if (!ready || !(globalThis as any)?.Razorpay) {
-        const linkResponse = await createPaymentLink();
-        const url = linkResponse.data?.data?.url;
-        if (url) {
-          openExternalUrl(url, 'Could not open Razorpay payment.');
-          return;
-        }
-        Alert.alert('Payment unavailable', 'Could not load Razorpay checkout.');
-        return;
-      }
-
-      const paymentData = orderResponse.data?.data;
-      const checkout = new (globalThis as any).Razorpay({
-        key: paymentData?.keyId,
-        order_id: paymentData?.order?.id,
-        amount: (paymentData?.amount || plan.amount) * 100,
-        currency: 'INR',
-        name: 'ResaleExpert',
-        description: `${plan.label} - ${code}`,
-        image:
-          'https://resaleexpert.in/uploads/system/company_logo-1778756377340-827835566-Resale-Expert-Logo.png',
-        notes: {
-          property_code: code,
-          plan: selectedPlan,
-        },
-        theme: {
-          color: '#E6761D',
-        },
-        handler: () => {
-          setShowPricingModal(false);
-          Alert.alert('Payment successful', 'Your premium access is unlocked.');
-        },
-      });
-
-      checkout.open();
+      const linkResponse = await createPaymentLink();
+      const url = linkResponse.data?.data?.url;
+      if (!url) throw new Error('Payment link missing');
+      openExternalUrl(url, 'Could not open Razorpay payment.');
     } catch (error: any) {
       Alert.alert(
         'Payment unavailable',

@@ -564,6 +564,7 @@ import {
   Linking,
   Alert,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {
@@ -593,6 +594,7 @@ import {
 } from 'lucide-react-native';
 import Footer from '../components/RealEstate/Footer';
 import { useCmsContent } from '../hooks/useCmsContent';
+import { paymentService } from '../services/api';
 
 const botIconUrl = 'https://resaleexpert.in/assets/png/RE-C-KQu9TZ.png';
 const serviceIcons = [Home, Building, CreditCard, FileText, Shield, TrendingUp];
@@ -1365,6 +1367,9 @@ const ServicesScreen = ({
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedService, setSelectedService] = useState('');
+  const [paymentPlanLoading, setPaymentPlanLoading] = useState<string | null>(
+    null,
+  );
   const cms = useCmsContent('services', servicesFallback);
 
   const openExpertModal = (serviceName: string) => {
@@ -1372,6 +1377,51 @@ const ServicesScreen = ({
     console.log('Service:', serviceName);
     setSelectedService(serviceName);
     setModalVisible(true);
+  };
+
+  const openPaymentUrl = (url: string) => {
+    const webWindow = (globalThis as any)?.window;
+    if (webWindow?.open) {
+      const opened = webWindow.open(url, '_blank', 'noopener,noreferrer');
+      if (opened) return;
+    }
+
+    if ((globalThis as any)?.location) {
+      (globalThis as any).location.href = url;
+      return;
+    }
+
+    Linking.openURL(url).catch(() =>
+      Alert.alert('Payment unavailable', 'Could not open Razorpay payment.'),
+    );
+  };
+
+  const handlePlanPayment = async (
+    plan: 'premium' | 'enterprise',
+    amount: number,
+    label: string,
+  ) => {
+    if (paymentPlanLoading) return;
+
+    setPaymentPlanLoading(plan);
+    try {
+      const response = await paymentService.createRazorpayPaymentLink({
+        plan,
+        amount,
+        label,
+        propertyCode: 'services',
+      });
+      const url = response.data?.data?.url;
+      if (!url) throw new Error('Payment link missing');
+      openPaymentUrl(url);
+    } catch (error: any) {
+      Alert.alert(
+        'Payment unavailable',
+        error?.response?.data?.message || 'Could not start Razorpay payment.',
+      );
+    } finally {
+      setPaymentPlanLoading(null);
+    }
   };
 
   const fallbackCoreServices: CoreService[] = [
@@ -1965,12 +2015,19 @@ const ServicesScreen = ({
                 ))}
               </View>
               <TouchableOpacity
-                onPress={() => openExpertModal('Premium Plan')}
+                onPress={() =>
+                  handlePlanPayment('premium', 2999, 'Premium Plan')
+                }
+                disabled={paymentPlanLoading !== null}
                 className="bg-white py-3 px-6 rounded-xl w-full"
               >
-                <Text className="text-blue-600 font-semibold text-center text-sm">
-                  Choose Premium
-                </Text>
+                {paymentPlanLoading === 'premium' ? (
+                  <ActivityIndicator color="#2563eb" size="small" />
+                ) : (
+                  <Text className="text-blue-600 font-semibold text-center text-sm">
+                    Choose Premium
+                  </Text>
+                )}
               </TouchableOpacity>
             </LinearGradient>
 
@@ -2001,12 +2058,19 @@ const ServicesScreen = ({
                 ))}
               </View>
               <TouchableOpacity
-                onPress={() => openExpertModal('Enterprise Plan')}
+                onPress={() =>
+                  handlePlanPayment('enterprise', 49999, 'Enterprise Plan')
+                }
+                disabled={paymentPlanLoading !== null}
                 className="bg-purple-600 py-3 px-6 rounded-xl w-full"
               >
-                <Text className="text-white font-semibold text-center text-sm">
-                  Contact Sales
-                </Text>
+                {paymentPlanLoading === 'enterprise' ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text className="text-white font-semibold text-center text-sm">
+                    Contact Sales
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

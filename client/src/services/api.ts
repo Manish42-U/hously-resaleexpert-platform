@@ -50,6 +50,14 @@ const api = axios.create({
   },
 });
 
+const paymentApi = axios.create({
+  baseURL: `${PRODUCTION_API_BASE_URL}/api`,
+  timeout: 20000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 // Request interceptor
 api.interceptors.request.use(
   config => {
@@ -158,7 +166,7 @@ export const paymentService = {
     receipt?: string;
     amount?: number;
     label?: string;
-  }) => api.post('/payments/razorpay/order', data),
+  }) => paymentApi.post('/payments/razorpay/order', data),
   createRazorpayPaymentLink: (data: {
     plan: string;
     propertyCode?: string;
@@ -167,7 +175,7 @@ export const paymentService = {
     email?: string;
     amount?: number;
     label?: string;
-  }) => api.post('/payments/razorpay/link', data),
+  }) => paymentApi.post('/payments/razorpay/link', data),
   createRazorpayPaymentLinkFallback: (data: {
     plan: string;
     propertyCode?: string;
@@ -176,7 +184,7 @@ export const paymentService = {
     email?: string;
     amount?: number;
     label?: string;
-  }) => api.post('/razorpay/link', data),
+  }) => paymentApi.post('/razorpay/link', data),
 };
 
 export const authService = {

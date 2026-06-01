@@ -343,56 +343,10 @@ const MarketIntelligence = () => {
 
     setPaymentLoading(true);
     try {
-      if (Platform.OS !== 'web') {
-        const linkResponse = await createPaymentLink(planKey, amount, label);
-        const url = linkResponse.data?.data?.url;
-        if (!url) throw new Error('Payment link missing');
-        openPaymentUrl(url);
-        return;
-      }
-
-      const [ready, orderResponse] = await Promise.all([
-        loadRazorpayScript(),
-        paymentService.createRazorpayOrder({
-          plan: planKey,
-          amount,
-          label,
-          propertyCode: 'market-intelligence',
-        }),
-      ]);
-
-      if (!ready || !(globalThis as any)?.Razorpay) {
-        const linkResponse = await createPaymentLink(planKey, amount, label);
-        const url = linkResponse.data?.data?.url;
-        if (!url) throw new Error('Payment link missing');
-        openPaymentUrl(url);
-        return;
-      }
-
-      const paymentData = orderResponse.data?.data;
-      const checkout = new (globalThis as any).Razorpay({
-        key: paymentData?.keyId,
-        order_id: paymentData?.order?.id,
-        amount: (paymentData?.amount || amount) * 100,
-        currency: 'INR',
-        name: 'ResaleExpert',
-        description: label,
-        image:
-          'https://resaleexpert.in/uploads/system/company_logo-1778756377340-827835566-Resale-Expert-Logo.png',
-        notes: {
-          plan: planKey,
-          billing_cycle: billingCycle,
-        },
-        theme: {
-          color: '#E6761D',
-        },
-        handler: () => {
-          setModalVisible(false);
-          Alert.alert('Payment successful', 'Your subscription is active.');
-        },
-      });
-
-      checkout.open();
+      const linkResponse = await createPaymentLink(planKey, amount, label);
+      const url = linkResponse.data?.data?.url;
+      if (!url) throw new Error('Payment link missing');
+      openPaymentUrl(url);
     } catch (error: any) {
       Alert.alert(
         'Payment unavailable',
