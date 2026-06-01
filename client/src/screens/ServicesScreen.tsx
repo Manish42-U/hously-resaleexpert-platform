@@ -2058,19 +2058,12 @@ const ServicesScreen = ({
                 ))}
               </View>
               <TouchableOpacity
-                onPress={() =>
-                  handlePlanPayment('enterprise', 49999, 'Enterprise Plan')
-                }
-                disabled={paymentPlanLoading !== null}
+                onPress={() => openExpertModal('Enterprise Plan')}
                 className="bg-purple-600 py-3 px-6 rounded-xl w-full"
               >
-                {paymentPlanLoading === 'enterprise' ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text className="text-white font-semibold text-center text-sm">
-                    Contact Sales
-                  </Text>
-                )}
+                <Text className="text-white font-semibold text-center text-sm">
+                  Contact Sales
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

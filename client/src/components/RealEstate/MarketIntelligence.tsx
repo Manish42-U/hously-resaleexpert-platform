@@ -26,6 +26,8 @@ import {
   Check,
   Shield,
   Users,
+  Phone,
+  MessageCircle,
 } from 'lucide-react-native';
 import { useCmsContent } from '../../hooks/useCmsContent';
 import { paymentService } from '../../services/api';
@@ -258,6 +260,7 @@ const MarketIntelligence = () => {
   );
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('pro');
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [contactSalesVisible, setContactSalesVisible] = useState(false);
 
   const plans = cms.plans ?? fallback.plans;
   const stats = cms.stats ?? fallback.stats;
@@ -334,6 +337,11 @@ const MarketIntelligence = () => {
     if (paymentLoading) return;
 
     const planKey = planOverride || selectedPlan;
+    if (planKey === 'enterprise') {
+      setContactSalesVisible(true);
+      return;
+    }
+
     const plan = plans[planKey];
     const amount =
       billingCycle === 'yearly'
@@ -560,7 +568,11 @@ const MarketIntelligence = () => {
         <TouchableOpacity
           onPress={() => {
             setSelectedPlan(planKey);
-            handleSubscribe(planKey);
+            if (planKey === 'enterprise') {
+              setContactSalesVisible(true);
+            } else {
+              handleSubscribe(planKey);
+            }
           }}
           disabled={paymentLoading}
           style={{
@@ -594,6 +606,21 @@ const MarketIntelligence = () => {
       </HoverPressCard>
     );
   };
+
+  const openSalesUrl = (url: string, fallbackMessage: string) => {
+    if ((globalThis as any)?.location && /^(tel|sms):/i.test(url)) {
+      (globalThis as any).location.href = url;
+      return;
+    }
+
+    Linking.openURL(url).catch(() => Alert.alert('Unable to open', fallbackMessage));
+  };
+
+  const contactPhone = '+919637009639';
+  const contactWhatsapp = '919637009639';
+  const contactMessage = encodeURIComponent(
+    'Hi team, I want to talk to sales about the Enterprise plan.',
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
@@ -1034,6 +1061,142 @@ const MarketIntelligence = () => {
               </View>
             </View>
           </View>
+        </Modal>
+
+        <Modal
+          visible={contactSalesVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setContactSalesVisible(false)}
+        >
+          <Pressable
+            onPress={() => setContactSalesVisible(false)}
+            style={{
+              flex: 1,
+              justifyContent: 'flex-end',
+              backgroundColor: 'rgba(7, 15, 25, 0.62)',
+            }}
+          >
+            <Pressable
+              onPress={event => event.stopPropagation()}
+              style={{
+                backgroundColor: 'white',
+                borderTopLeftRadius: 26,
+                borderTopRightRadius: 26,
+                padding: 20,
+                paddingBottom: 26,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 16,
+                }}
+              >
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text
+                    style={{
+                      fontSize: 18,
+                      fontWeight: '900',
+                      color: '#0B3856',
+                    }}
+                  >
+                    Talk to Sales
+                  </Text>
+                  <Text style={{ marginTop: 3, fontSize: 12, color: '#E6761D', fontWeight: '700' }}>
+                    Enterprise Plan
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setContactSalesVisible(false)}
+                  style={{
+                    padding: 8,
+                    borderRadius: 999,
+                    backgroundColor: '#F3F4F6',
+                  }}
+                >
+                  <X size={18} color="#1F2937" />
+                </TouchableOpacity>
+              </View>
+
+              <View
+                style={{
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: '#FED7AA',
+                  backgroundColor: '#FFF7ED',
+                  padding: 14,
+                  marginBottom: 16,
+                }}
+              >
+                <Text style={{ color: '#475569', fontSize: 12, lineHeight: 18 }}>
+                  Hi team, I want to talk to sales about the Enterprise plan.
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() =>
+                    openSalesUrl(
+                      `https://wa.me/${contactWhatsapp}?text=${contactMessage}`,
+                      'Could not open WhatsApp.',
+                    )
+                  }
+                  style={{ flex: 1 }}
+                >
+                  <View
+                    style={{
+                      borderRadius: 12,
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                      backgroundColor: '#16A34A',
+                    }}
+                  >
+                    <MessageCircle size={19} color="white" />
+                    <Text style={{ marginTop: 4, color: 'white', fontSize: 12, fontWeight: '800' }}>
+                      WhatsApp
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() =>
+                    openSalesUrl(`tel:${contactPhone}`, 'Could not open phone dialer.')
+                  }
+                  style={{ flex: 1 }}
+                >
+                  <View
+                    style={{
+                      borderRadius: 12,
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                      backgroundColor: '#2563EB',
+                    }}
+                  >
+                    <Phone size={19} color="white" />
+                    <Text style={{ marginTop: 4, color: 'white', fontSize: 12, fontWeight: '800' }}>
+                      Call Now
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={() =>
+                  openSalesUrl(`tel:${contactPhone}`, 'Could not open phone dialer.')
+                }
+                style={{ alignItems: 'center', paddingVertical: 6 }}
+              >
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#0B3856' }}>
+                  +91 9637 00 9639
+                </Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
         </Modal>
       </ScrollView>
     </SafeAreaView>
