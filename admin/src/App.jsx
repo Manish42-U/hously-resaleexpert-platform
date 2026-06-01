@@ -56,12 +56,12 @@ const AppContent = () => {
   }
 
   return (
-    <div className="flex bg-gray-50 h-screen overflow-hidden">
+    <div className="min-h-screen bg-gray-50 lg:flex lg:h-screen lg:overflow-hidden">
       <Sidebar />
       {/* Right panel: header fixed at top, content scrolls below */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:h-screen">
         <AdminHeader />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

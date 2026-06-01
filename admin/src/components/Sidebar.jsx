@@ -68,10 +68,46 @@ const Sidebar = () => {
     navigate('/login');
   };
 
+  const flatMenuItems = menuGroups.flatMap((group) => group.items);
+
   return (
     <>
+      <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a] shadow-xl shadow-slate-950/15 lg:hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#E6761D]">{greeting.text}</p>
+            <p className="truncate text-sm font-black capitalize text-white">{userName}</p>
+          </div>
+          <button
+            onClick={logout}
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-white/8 text-slate-300 transition hover:bg-red-500/15 hover:text-red-300"
+            aria-label="Sign out"
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
+        <nav className="flex gap-2 overflow-x-auto px-3 pb-3 scrollbar-custom">
+          {flatMenuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `
+                flex min-w-max items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black transition
+                ${isActive
+                  ? 'bg-[#E6761D] text-white shadow-lg shadow-[#E6761D]/25'
+                  : 'bg-white/6 text-slate-300 hover:bg-white/12 hover:text-white'
+                }
+              `}
+            >
+              <item.icon size={15} />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+
       <aside
-        className={`fixed left-0 top-0 z-50 h-screen transition-all duration-500 ease-out flex flex-col
+        className={`fixed left-0 top-0 z-50 hidden h-screen transition-all duration-500 ease-out lg:flex flex-col
           ${collapsed ? 'w-[72px]' : 'w-72'}
           bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#0f172a]
           border-r border-white/8 shadow-2xl shadow-black/50`}
@@ -239,7 +275,7 @@ const Sidebar = () => {
       </aside>
 
       {/* CONTENT SPACER */}
-      <div className={`transition-all duration-500 ease-out ${collapsed ? 'ml-[72px]' : 'ml-72'}`} />
+      <div className={`hidden transition-all duration-500 ease-out lg:block ${collapsed ? 'ml-[72px]' : 'ml-72'}`} />
     </>
   );
 };

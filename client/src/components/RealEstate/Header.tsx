@@ -22,9 +22,7 @@ interface HeaderProps {
   onTabChange: (tab: string) => void;
 }
 
-const ADMIN_LOGIN_URL = __DEV__
-  ? 'http://localhost:5173/login'
-  : 'https://admin.resaleexpert.in/login';
+const ADMIN_LOGIN_URL = 'https://admin.resaleexpert.in/login';
 
 const Header = ({ isScrolled = false, activeTab, onTabChange }: HeaderProps) => {
   const insets = useSafeAreaInsets();

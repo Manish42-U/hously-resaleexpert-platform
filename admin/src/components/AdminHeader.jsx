@@ -149,7 +149,7 @@ const AdminHeader = () => {
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200/70 bg-white/95 backdrop-blur-xl shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
-      <div className="flex h-20 items-center justify-between px-5 lg:px-8 gap-5">
+      <div className="flex h-16 items-center justify-between gap-3 px-3 sm:h-20 sm:px-5 lg:px-8 lg:gap-5">
         <div className="flex items-center gap-4">
           <NavLink to="/" className="flex items-center gap-2.5 shrink-0 group">
             <img
@@ -223,14 +223,14 @@ const AdminHeader = () => {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => { setShowNotif(!showNotif); setShowProfile(false) }}
-              className={`relative p-3 rounded-2xl transition-all duration-300 ${showNotif ? 'bg-[#E6761D] text-white shadow-lg shadow-orange-200' : 'text-gray-500 hover:-translate-y-0.5 hover:bg-orange-50 hover:text-[#E6761D] hover:shadow-lg hover:shadow-orange-100'}`}
+              className={`relative rounded-2xl p-2.5 transition-all duration-300 sm:p-3 ${showNotif ? 'bg-[#E6761D] text-white shadow-lg shadow-orange-200' : 'text-gray-500 hover:-translate-y-0.5 hover:bg-orange-50 hover:text-[#E6761D] hover:shadow-lg hover:shadow-orange-100'}`}
             >
               <Bell size={19} />
               {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white">{unreadCount}</span>}
             </button>
 
             {showNotif && (
-              <div className="absolute right-0 top-full mt-3 w-96 bg-white rounded-3xl border border-gray-200/70 shadow-2xl overflow-hidden z-50">
+              <div className="absolute right-0 top-full z-50 mt-3 w-[calc(100vw-1.5rem)] max-w-96 overflow-hidden rounded-3xl border border-gray-200/70 bg-white shadow-2xl">
                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
                   <div>
                     <h3 className="font-black text-gray-900">Live Notifications</h3>
@@ -279,8 +279,8 @@ const AdminHeader = () => {
           </div>
 
           <div className="relative" ref={profileRef}>
-            <button onClick={() => { setShowProfile(!showProfile); setShowNotif(false) }} className="flex items-center gap-2 rounded-2xl p-2 pl-3 transition-all duration-300 hover:-translate-y-0.5 hover:bg-orange-50 hover:shadow-lg hover:shadow-orange-100">
-              <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[#E6761D] to-orange-500 text-white flex items-center justify-center text-sm font-black shadow-lg shadow-orange-200">{userInitials}</div>
+            <button onClick={() => { setShowProfile(!showProfile); setShowNotif(false) }} className="flex items-center gap-2 rounded-2xl p-1.5 transition-all duration-300 hover:-translate-y-0.5 hover:bg-orange-50 hover:shadow-lg hover:shadow-orange-100 sm:p-2 sm:pl-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E6761D] to-orange-500 text-sm font-black text-white shadow-lg shadow-orange-200 sm:h-11 sm:w-11">{userInitials}</div>
               <div className="hidden lg:block text-left">
                 <p className="text-sm font-black text-gray-900 leading-tight">{userName}</p>
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{userRole}</p>
@@ -289,7 +289,7 @@ const AdminHeader = () => {
             </button>
 
             {showProfile && (
-              <div className="absolute right-0 top-full mt-3 w-72 bg-white rounded-3xl border border-gray-200/70 shadow-2xl overflow-hidden z-50">
+              <div className="absolute right-0 top-full z-50 mt-3 w-[calc(100vw-1.5rem)] max-w-72 overflow-hidden rounded-3xl border border-gray-200/70 bg-white shadow-2xl">
                 <div className="p-4 border-b border-gray-100 bg-gray-50/80">
                   <p className="font-black text-gray-900">{userName}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{user.email || 'No email'}</p>
