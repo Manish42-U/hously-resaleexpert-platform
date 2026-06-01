@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Animated,
+  ActivityIndicator,
   View,
   Text,
   TouchableOpacity,
@@ -8,6 +9,8 @@ import {
   Modal,
   ScrollView,
   Alert,
+  Linking,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +28,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import { useCmsContent } from '../../hooks/useCmsContent';
+import { paymentService } from '../../services/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -253,6 +257,7 @@ const MarketIntelligence = () => {
     'yearly',
   );
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('pro');
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const plans = cms.plans ?? fallback.plans;
   const stats = cms.stats ?? fallback.stats;
@@ -269,15 +274,133 @@ const MarketIntelligence = () => {
     ? (screenWidth - 72) / 2
     : screenWidth - 48;
 
-  const handleSubscribe = () => {
-    Alert.alert(
-      'Upgrade Plan',
-      `You've selected the ${plans[selectedPlan].name} plan (${billingCycle}). Proceed to payment?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Subscribe', onPress: () => console.log('Subscribe pressed') },
-      ],
+  const openPaymentUrl = (url: string) => {
+    if (Platform.OS === 'web' && (globalThis as any)?.window?.open) {
+      const opened = (globalThis as any).window.open(
+        url,
+        '_blank',
+        'noopener,noreferrer',
+      );
+      if (opened) return;
+    }
+
+    Linking.openURL(url).catch(() =>
+      Alert.alert('Payment unavailable', 'Could not open Razorpay payment.'),
     );
+  };
+
+  const loadRazorpayScript = () =>
+    new Promise<boolean>(resolve => {
+      const webDocument = (globalThis as any)?.document;
+      if (!webDocument) {
+        resolve(false);
+        return;
+      }
+      if ((globalThis as any)?.Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = webDocument.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      webDocument.body.appendChild(script);
+    });
+
+  const createPaymentLink = async (
+    planKey: PlanKey,
+    amount: number,
+    label: string,
+  ) => {
+    const payload = {
+      plan: planKey,
+      amount,
+      label,
+      propertyCode: 'market-intelligence',
+    };
+
+    try {
+      return await paymentService.createRazorpayPaymentLink(payload);
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return paymentService.createRazorpayPaymentLinkFallback(payload);
+      }
+      throw error;
+    }
+  };
+
+  const handleSubscribe = async (planOverride?: PlanKey) => {
+    if (paymentLoading) return;
+
+    const planKey = planOverride || selectedPlan;
+    const plan = plans[planKey];
+    const amount =
+      billingCycle === 'yearly'
+        ? plan.yearlyPrice
+        : Math.round(plan.monthlyPrice);
+    const label = `${plan.name} Plan (${billingCycle})`;
+
+    setPaymentLoading(true);
+    try {
+      if (Platform.OS !== 'web') {
+        const linkResponse = await createPaymentLink(planKey, amount, label);
+        const url = linkResponse.data?.data?.url;
+        if (!url) throw new Error('Payment link missing');
+        openPaymentUrl(url);
+        return;
+      }
+
+      const [ready, orderResponse] = await Promise.all([
+        loadRazorpayScript(),
+        paymentService.createRazorpayOrder({
+          plan: planKey,
+          amount,
+          label,
+          propertyCode: 'market-intelligence',
+        }),
+      ]);
+
+      if (!ready || !(globalThis as any)?.Razorpay) {
+        const linkResponse = await createPaymentLink(planKey, amount, label);
+        const url = linkResponse.data?.data?.url;
+        if (!url) throw new Error('Payment link missing');
+        openPaymentUrl(url);
+        return;
+      }
+
+      const paymentData = orderResponse.data?.data;
+      const checkout = new (globalThis as any).Razorpay({
+        key: paymentData?.keyId,
+        order_id: paymentData?.order?.id,
+        amount: (paymentData?.amount || amount) * 100,
+        currency: 'INR',
+        name: 'ResaleExpert',
+        description: label,
+        image:
+          'https://resaleexpert.in/uploads/system/company_logo-1778756377340-827835566-Resale-Expert-Logo.png',
+        notes: {
+          plan: planKey,
+          billing_cycle: billingCycle,
+        },
+        theme: {
+          color: '#E6761D',
+        },
+        handler: () => {
+          setModalVisible(false);
+          Alert.alert('Payment successful', 'Your subscription is active.');
+        },
+      });
+
+      checkout.open();
+    } catch (error: any) {
+      Alert.alert(
+        'Payment unavailable',
+        error?.response?.data?.message || 'Could not start Razorpay payment.',
+      );
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   const renderPlanCard = (planKey: PlanKey) => {
@@ -483,8 +606,9 @@ const MarketIntelligence = () => {
         <TouchableOpacity
           onPress={() => {
             setSelectedPlan(planKey);
-            handleSubscribe();
+            handleSubscribe(planKey);
           }}
+          disabled={paymentLoading}
           style={{
             width: '100%',
             paddingVertical: 12,
@@ -496,15 +620,22 @@ const MarketIntelligence = () => {
             alignItems: 'center',
           }}
         >
-          <Text
-            style={{
-              fontWeight: '600',
-              fontSize: 14,
-              color: isSelected || planKey === 'pro' ? 'white' : '#7C3AED',
-            }}
-          >
-            {plan.buttonText}
-          </Text>
+          {paymentLoading && isSelected ? (
+            <ActivityIndicator
+              color={isSelected || planKey === 'pro' ? 'white' : '#7C3AED'}
+              size="small"
+            />
+          ) : (
+            <Text
+              style={{
+                fontWeight: '600',
+                fontSize: 14,
+                color: isSelected || planKey === 'pro' ? 'white' : '#7C3AED',
+              }}
+            >
+              {plan.buttonText}
+            </Text>
+          )}
         </TouchableOpacity>
       </HoverPressCard>
     );
@@ -917,7 +1048,8 @@ const MarketIntelligence = () => {
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={handleSubscribe}
+                    onPress={() => handleSubscribe()}
+                    disabled={paymentLoading}
                     style={{
                       flex: 2,
                       paddingVertical: 13,
@@ -929,7 +1061,11 @@ const MarketIntelligence = () => {
                       gap: 8,
                     }}
                   >
-                    <Crown size={16} color="white" />
+                    {paymentLoading ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Crown size={16} color="white" />
+                    )}
                     <Text
                       style={{
                         color: 'white',
@@ -937,7 +1073,7 @@ const MarketIntelligence = () => {
                         fontSize: 14,
                       }}
                     >
-                      Subscribe Now
+                      {paymentLoading ? 'Opening Payment...' : 'Subscribe Now'}
                     </Text>
                   </TouchableOpacity>
                 </View>

@@ -151,6 +151,34 @@ export const contactService = {
   getAll: () => api.get('/contact'),
 };
 
+export const paymentService = {
+  createRazorpayOrder: (data: {
+    plan: string;
+    propertyCode?: string;
+    receipt?: string;
+    amount?: number;
+    label?: string;
+  }) => api.post('/payments/razorpay/order', data),
+  createRazorpayPaymentLink: (data: {
+    plan: string;
+    propertyCode?: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+    amount?: number;
+    label?: string;
+  }) => api.post('/payments/razorpay/link', data),
+  createRazorpayPaymentLinkFallback: (data: {
+    plan: string;
+    propertyCode?: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+    amount?: number;
+    label?: string;
+  }) => api.post('/razorpay/link', data),
+};
+
 export const authService = {
   login: (data: { email: string; password: string }) =>
     api.post('/auth/login', data),

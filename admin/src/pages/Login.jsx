@@ -9,11 +9,27 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isMobileAccess, setIsMobileAccess] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const updateAccess = () => setIsMobileAccess(mediaQuery.matches);
+
+    updateAccess();
+    mediaQuery.addEventListener?.('change', updateAccess);
+    return () => mediaQuery.removeEventListener?.('change', updateAccess);
+  }, []);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (isMobileAccess) {
+      setError('Only can access on desktop.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 

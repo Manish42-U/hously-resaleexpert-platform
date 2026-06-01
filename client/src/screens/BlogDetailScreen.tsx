@@ -90,6 +90,9 @@ const BlogDetailScreen = ({ blog, recent = [], onBack, onOpenBlog }: any) => {
   const [commentText, setCommentText] = useState('');
   const [commentStatus, setCommentStatus] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const visibleComments = comments
+    .filter(item => String(item?.comment || '').trim())
+    .slice(0, 5);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -244,8 +247,15 @@ const BlogDetailScreen = ({ blog, recent = [], onBack, onOpenBlog }: any) => {
         email,
         comment,
       });
-      if (response.data?.success && response.data?.data) {
-        setComments(current => [response.data.data, ...current]);
+      if (response.data?.success !== false) {
+        const createdComment = response.data?.data || {
+          id: `local-${Date.now()}`,
+          name,
+          email,
+          comment,
+          created_at: new Date().toISOString(),
+        };
+        setComments(current => [createdComment, ...current]);
         setCommentName('');
         setCommentEmail('');
         setCommentText('');
@@ -403,30 +413,37 @@ const BlogDetailScreen = ({ blog, recent = [], onBack, onOpenBlog }: any) => {
                 <Text className="text-xl font-black text-gray-950 mb-3">
                   Comments ({comments.length})
                 </Text>
-                {comments.length > 0 && (
+                {visibleComments.length > 0 ? (
                   <View className="mb-4">
-                    {comments.slice(0, 5).map((item: any) => (
+                    {visibleComments.map((item: any, index: number) => (
                       <View
-                        key={item.id}
+                        key={item.id || `${item.name || 'comment'}-${index}`}
                         className="bg-slate-50 border border-orange-200 rounded-xl p-3 mb-2 transition-all hover:border-orange-500 hover:shadow-md hover:bg-white"
                       >
                         <View className="flex-row items-center justify-between mb-1">
                           <Text className="font-black text-gray-900">
-                            {item.name}
+                            {String(item.name || '').trim() || 'Reader'}
                           </Text>
                           <Text className="text-[10px] text-gray-400">
                             {formatDate(item.created_at)}
                           </Text>
                         </View>
                         <Text className="text-gray-700 leading-5">
-                          {item.comment}
+                          {String(item.comment || '').trim()}
                         </Text>
                       </View>
                     ))}
                   </View>
+                ) : (
+                  <View className="mb-4 rounded-xl bg-slate-50 px-4 py-4">
+                    <Text className="text-sm font-semibold text-gray-500">
+                      No comments yet. Be the first to share your thoughts.
+                    </Text>
+                  </View>
                 )}
                 <TextInput
                   placeholder="Share your thoughts..."
+                  placeholderTextColor="#64748B"
                   multiline
                   value={commentText}
                   onChangeText={setCommentText}
@@ -435,17 +452,19 @@ const BlogDetailScreen = ({ blog, recent = [], onBack, onOpenBlog }: any) => {
                 <View className="flex-row gap-3 mt-3">
                   <TextInput
                     placeholder="Name"
+                    placeholderTextColor="#64748B"
                     value={commentName}
                     onChangeText={setCommentName}
-                    className="flex-1 bg-slate-50 border border-orange-300 rounded-xl px-3 py-2 transition-all hover:border-orange-500 hover:bg-white"
+                    className="flex-1 bg-slate-50 border border-orange-300 rounded-xl px-3 py-2 text-gray-900 transition-all hover:border-orange-500 hover:bg-white"
                   />
                   <TextInput
                     placeholder="Email"
+                    placeholderTextColor="#64748B"
                     value={commentEmail}
                     onChangeText={setCommentEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    className="flex-1 bg-slate-50 border border-orange-300 rounded-xl px-3 py-2 transition-all hover:border-orange-500 hover:bg-white"
+                    className="flex-1 bg-slate-50 border border-orange-300 rounded-xl px-3 py-2 text-gray-900 transition-all hover:border-orange-500 hover:bg-white"
                   />
                 </View>
                 {!!commentStatus && (

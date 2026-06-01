@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -8,6 +8,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   Alert,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -129,6 +130,55 @@ const RealEstate = ({ route }: any) => {
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [selectedBlog, setSelectedBlog] = useState<any>(null);
   const [recentBlogs, setRecentBlogs] = useState<any[]>([]);
+  const syncsBrowserHistory =
+    Platform.OS === 'web' &&
+    Boolean((globalThis as any)?.history) &&
+    Boolean((globalThis as any)?.location);
+
+  const tabPathByName = useMemo<Record<string, string>>(
+    () => ({
+      Home: '/home',
+      Properties: '/properties',
+      Services: '/services',
+      About: '/about',
+      Blogs: '/blogs',
+      Contact: '/contact',
+      PostProperty: '/post-property',
+      PropertyDetail: '/property-detail',
+      BlogDetail: '/blog-detail',
+      PrivacyPolicy: '/privacy-policy',
+      Terms: '/terms-and-conditions',
+    }),
+    [],
+  );
+
+  const tabNameByPath = useMemo<Record<string, string>>(
+    () =>
+      Object.fromEntries(
+        Object.entries(tabPathByName).map(([tab, path]) => [path, tab]),
+      ),
+    [tabPathByName],
+  );
+
+  const changeTab = useCallback(
+    (tab: string, options: { replace?: boolean } = {}) => {
+      setActiveTab(tab);
+      if (!syncsBrowserHistory) return;
+
+      const history = (globalThis as any).history;
+      const location = (globalThis as any).location;
+      const path = tabPathByName[tab] || `/${tab.toLowerCase()}`;
+      if (location.pathname === path && !options.replace) return;
+
+      const state = { activeTab: tab };
+      if (options.replace) {
+        history.replaceState(state, '', path);
+      } else {
+        history.pushState(state, '', path);
+      }
+    },
+    [syncsBrowserHistory, tabPathByName],
+  );
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -149,6 +199,28 @@ const RealEstate = ({ route }: any) => {
     };
     loadProperties();
   }, []);
+
+  useEffect(() => {
+    if (!syncsBrowserHistory) return;
+
+    const history = (globalThis as any).history;
+    const location = (globalThis as any).location;
+    const initialTab =
+      tabNameByPath[String(location.pathname).toLowerCase()] || activeTab;
+    history.replaceState({ activeTab: initialTab }, '', location.pathname);
+
+    const handlePopState = (event: any) => {
+      const nextTab =
+        event.state?.activeTab ||
+        tabNameByPath[String((globalThis as any).location.pathname).toLowerCase()] ||
+        'Home';
+      setActiveTab(nextTab);
+    };
+
+    (globalThis as any).addEventListener('popstate', handlePopState);
+    return () =>
+      (globalThis as any).removeEventListener('popstate', handlePopState);
+  }, [activeTab, syncsBrowserHistory, tabNameByPath]);
 
   useEffect(() => {
     setIsScrolled(activeTab !== 'Home');
@@ -179,7 +251,7 @@ const RealEstate = ({ route }: any) => {
         : await propertyService.getById(id);
       const property = response.data?.data ?? response.data;
       setSelectedProperty(property);
-      setActiveTab('PropertyDetail');
+      changeTab('PropertyDetail');
     } catch (error) {
       console.error('Failed to load property details', error);
       Alert.alert(
@@ -224,6 +296,7 @@ const RealEstate = ({ route }: any) => {
 
     return true;
   });
+  const homeProperties = filteredProperties.slice(0, 12);
 
   return (
     <View className="flex-1 bg-white">
@@ -254,7 +327,7 @@ const RealEstate = ({ route }: any) => {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             content={homeContent}
-            onSearch={() => setActiveTab('Properties')}
+            onSearch={() => changeTab('Properties')}
           />
 
           <MarketIntelligence />
@@ -271,8 +344,8 @@ const RealEstate = ({ route }: any) => {
 
             {loading ? (
               <PropertyFetchLoader message="Fetching featured properties" />
-            ) : filteredProperties.length ? (
-              filteredProperties.map(item => (
+            ) : homeProperties.length ? (
+              homeProperties.map(item => (
                 <PropertyCard
                   key={item.id}
                   item={item}
@@ -288,7 +361,7 @@ const RealEstate = ({ route }: any) => {
             )}
 
             <TouchableOpacity
-              onPress={() => setActiveTab('Properties')}
+              onPress={() => changeTab('Properties')}
               className="bg-[#E6761D] py-4 rounded-2xl items-center shadow-xl shadow-orange-100"
             >
               <Text className="text-white font-black text-sm uppercase tracking-widest">
@@ -298,21 +371,21 @@ const RealEstate = ({ route }: any) => {
           </View>
 
           <SellSection
-            onPostProperty={() => setActiveTab('PostProperty')}
+            onPostProperty={() => changeTab('PostProperty')}
             content={homeContent}
           />
           <WhyChooseUs />
           <StatsSection />
           <Testimonials />
           <FinalCTA
-            onViewServices={() => setActiveTab('Services')}
-            onBrowseProperties={() => setActiveTab('Properties')}
+            onViewServices={() => changeTab('Services')}
+            onBrowseProperties={() => changeTab('Properties')}
           />
-          <Footer onTabChange={setActiveTab} />
+          <Footer onTabChange={changeTab} />
         </ScrollView>
       ) : activeTab === 'Services' ? (
         <View style={{ flex: 1, paddingTop: 80 + insets.top }}>
-          <ServicesScreen onScroll={handleScroll} onTabChange={setActiveTab} />
+          <ServicesScreen onScroll={handleScroll} onTabChange={changeTab} />
         </View>
       ) : activeTab === 'Properties' ? (
         <View style={{ flex: 1, paddingTop: 80 + insets.top }}>
@@ -321,7 +394,7 @@ const RealEstate = ({ route }: any) => {
             loading={loading}
             onScroll={handleScroll}
             onViewDetails={handleViewDetails}
-            onTabChange={setActiveTab}
+            onTabChange={changeTab}
             initialSearchQuery={searchQuery}
             initialCategory={category}
           />
@@ -333,9 +406,9 @@ const RealEstate = ({ route }: any) => {
             onReadBlog={(blog, blogs) => {
               setSelectedBlog(blog);
               setRecentBlogs(blogs);
-              setActiveTab('BlogDetail');
+              changeTab('BlogDetail');
             }}
-            onTabChange={setActiveTab}
+            onTabChange={changeTab}
           />
         </View>
       ) : activeTab === 'PropertyDetail' && selectedProperty ? (
@@ -343,48 +416,48 @@ const RealEstate = ({ route }: any) => {
           <PropertyDetailScreen
             property={selectedProperty}
             similar={properties}
-            onBack={() => setActiveTab('Properties')}
+            onBack={() => changeTab('Properties')}
             onOpenProperty={handleViewDetails}
-            onTabChange={setActiveTab}
+            onTabChange={changeTab}
           />
         </View>
       ) : activeTab === 'BlogDetail' && selectedBlog ? (
         <BlogDetailScreen
           blog={selectedBlog}
           recent={recentBlogs}
-          onBack={() => setActiveTab('Blogs')}
+          onBack={() => changeTab('Blogs')}
           onOpenBlog={(blog: any) => {
             setSelectedBlog(blog);
-            setActiveTab('BlogDetail');
+            changeTab('BlogDetail');
           }}
         />
       ) : activeTab === 'About' ? (
         <View style={{ flex: 1, paddingTop: 80 + insets.top }}>
-          <AboutScreen onScroll={handleScroll} onTabChange={setActiveTab} />
+          <AboutScreen onScroll={handleScroll} onTabChange={changeTab} />
         </View>
       ) : activeTab === 'Contact' ? (
         <View style={{ flex: 1, paddingTop: 80 + insets.top }}>
-          <ContactScreen onScroll={handleScroll} onTabChange={setActiveTab} />
+          <ContactScreen onScroll={handleScroll} onTabChange={changeTab} />
         </View>
       ) : activeTab === 'PrivacyPolicy' ? (
         <View style={{ flex: 1, paddingTop: 80 + insets.top }}>
           <PrivacyPolicyScreen
-            onBack={() => setActiveTab('Home')}
-            onTabChange={setActiveTab}
+            onBack={() => changeTab('Home')}
+            onTabChange={changeTab}
           />
         </View>
       ) : activeTab === 'Terms' ? (
         <View style={{ flex: 1, paddingTop: 80 + insets.top }}>
           <TermsAndConditionsScreen
-            onBack={() => setActiveTab('Home')}
-            onTabChange={setActiveTab}
+            onBack={() => changeTab('Home')}
+            onTabChange={changeTab}
           />
         </View>
       ) : activeTab === 'PostProperty' ? (
         <View style={{ flex: 1, paddingTop: 80 + insets.top }}>
           <PostPropertyScreen
             onScroll={handleScroll}
-            onTabChange={setActiveTab}
+            onTabChange={changeTab}
           />
         </View>
       ) : activeTab === 'Login' ? (
@@ -392,9 +465,9 @@ const RealEstate = ({ route }: any) => {
           <LoginScreen
             onLogin={(user: any) => {
               setAdminUser(user);
-              setActiveTab('Admin');
+              changeTab('Admin');
             }}
-            onRegisterPress={() => setActiveTab('Register')}
+            onRegisterPress={() => changeTab('Register')}
           />
         </View>
       ) : activeTab === 'Register' ? (
@@ -403,12 +476,12 @@ const RealEstate = ({ route }: any) => {
             onRegistered={(user: any) => {
               if (['admin', 'manager', 'agent'].includes(user?.role)) {
                 setAdminUser(user);
-                setActiveTab('Admin');
+                changeTab('Admin');
               } else {
-                setActiveTab('Login');
+                changeTab('Login');
               }
             }}
-            onLoginPress={() => setActiveTab('Login')}
+            onLoginPress={() => changeTab('Login')}
           />
         </View>
       ) : activeTab === 'Admin' ? (
@@ -417,7 +490,7 @@ const RealEstate = ({ route }: any) => {
             user={adminUser}
             onLogout={() => {
               setAdminUser(null);
-              setActiveTab('Login');
+              changeTab('Login');
             }}
           />
         </View>
@@ -434,7 +507,7 @@ const RealEstate = ({ route }: any) => {
             {activeTab} Section Coming Soon
           </Text>
           <TouchableOpacity
-            onPress={() => setActiveTab('Home')}
+            onPress={() => changeTab('Home')}
             className="mt-4 bg-[#E6761D] px-6 py-2 rounded-xl"
           >
             <Text className="text-white font-bold">Go Back Home</Text>
@@ -445,12 +518,12 @@ const RealEstate = ({ route }: any) => {
       <Header
         isScrolled={isScrolled}
         activeTab={activeTab}
-        onTabChange={tab => setActiveTab(tab)}
+        onTabChange={changeTab}
       />
       <FloatingChat
         properties={properties}
         onOpenProperty={handleViewDetails}
-        onBrowseProperties={() => setActiveTab('Properties')}
+        onBrowseProperties={() => changeTab('Properties')}
       />
     </View>
   );

@@ -50,7 +50,7 @@ import {
   Info,
 } from 'lucide-react-native';
 
-import { contactService } from '../services/api';
+import { contactService, paymentService } from '../services/api';
 import Footer from '../components/RealEstate/Footer';
 
 // ---------- Helper Functions ----------
@@ -89,6 +89,12 @@ const normalizePhoneDigits = (value: any, fallback = '919637009639') => {
   return digits.length === 10 ? `91${digits}` : digits;
 };
 
+const planDetails = {
+  '5views': { label: '5 Property Views', amount: 299 },
+  '12views': { label: '12 Property Views', amount: 599 },
+  unlimited: { label: 'Unlimited Views', amount: 1999 },
+};
+
 // ---------- Main Component ----------
 const PropertyDetailScreen = ({
   property,
@@ -113,6 +119,7 @@ const PropertyDetailScreen = ({
   const [selectedPlan, setSelectedPlan] = useState<
     '5views' | '12views' | 'unlimited'
   >('5views');
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [expandedDesc, setExpandedDesc] = useState(false);
   const [openingPropertyId, setOpeningPropertyId] = useState<string | null>(
     null,
@@ -283,46 +290,217 @@ const PropertyDetailScreen = ({
     .filter(Boolean)
     .join(', ');
 
-  const openPhone = (url: string, errorMessage: string) => {
+  const openExternalUrl = (url: string, errorMessage: string) => {
+    if (Platform.OS === 'web') {
+      const webWindow = (globalThis as any)?.window;
+      const isAppScheme = /^(tel|sms|mailto):/i.test(url);
+      if (isAppScheme && (globalThis as any)?.location) {
+        (globalThis as any).location.href = url;
+        return;
+      }
+
+      if (webWindow?.open) {
+        const opened = webWindow.open(url, '_blank', 'noopener,noreferrer');
+        if (opened) return;
+      }
+      if ((globalThis as any)?.location) {
+        (globalThis as any).location.href = url;
+        return;
+      }
+    }
+
     Linking.openURL(url).catch(() =>
       Alert.alert('Unable to open', errorMessage),
     );
   };
 
   const callExecutive = () => {
-    openPhone(`tel:+${executivePhoneDigits}`, 'Could not open phone dialer.');
+    openExternalUrl(
+      `tel:+${executivePhoneDigits}`,
+      'Could not open phone dialer.',
+    );
   };
 
   const messageExecutive = () => {
-    openPhone(`sms:+${executivePhoneDigits}`, 'Could not open SMS app.');
+    openExternalUrl(`sms:+${executivePhoneDigits}`, 'Could not open SMS app.');
   };
 
   const openWhatsApp = () => {
     const text = encodeURIComponent(
       `Hi, I'm interested in property ${code}. Please share details and site visit availability.`,
     );
-    openPhone(
-      `https://wa.me/${whatsappDigits}?text=${text}`,
+    const whatsappUrl =
+      Platform.OS === 'web'
+        ? `https://web.whatsapp.com/send?phone=${whatsappDigits}&text=${text}`
+        : `whatsapp://send?phone=${whatsappDigits}&text=${text}`;
+    const fallbackUrl = `https://api.whatsapp.com/send?phone=${whatsappDigits}&text=${text}`;
+
+    if (Platform.OS !== 'web') {
+      Linking.canOpenURL(whatsappUrl)
+        .then(canOpen =>
+          openExternalUrl(canOpen ? whatsappUrl : fallbackUrl, 'Could not open WhatsApp.'),
+        )
+        .catch(() => openExternalUrl(fallbackUrl, 'Could not open WhatsApp.'));
+      return;
+    }
+
+    openExternalUrl(
+      whatsappUrl,
       'Could not open WhatsApp.',
     );
   };
 
+  const getRazorpayPaymentLink = () => {
+    const byPlan =
+      selectedPlan === '5views'
+        ? property?.razorpay_5views_link || property?.razorpayFiveViewsLink
+        : selectedPlan === '12views'
+        ? property?.razorpay_12views_link || property?.razorpayTwelveViewsLink
+        : property?.razorpay_unlimited_link || property?.razorpayUnlimitedLink;
+
+    return (
+      byPlan ||
+      property?.razorpay_payment_link ||
+      property?.razorpayPaymentLink ||
+      (globalThis as any)?.RAZORPAY_PAYMENT_LINK ||
+      ''
+    );
+  };
+
+  const loadRazorpayScript = () =>
+    new Promise<boolean>(resolve => {
+      const webDocument = (globalThis as any)?.document;
+      if (!webDocument) {
+        resolve(false);
+        return;
+      }
+      if ((globalThis as any)?.Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = webDocument.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      webDocument.body.appendChild(script);
+    });
+
+  const createPaymentLink = async () => {
+    const payload = {
+      plan: selectedPlan,
+      propertyCode: code,
+    };
+
+    try {
+      return await paymentService.createRazorpayPaymentLink(payload);
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return paymentService.createRazorpayPaymentLinkFallback(payload);
+      }
+      throw error;
+    }
+  };
+
+  const handleRazorpayPayment = async () => {
+    if (paymentLoading) return;
+
+    const paymentLink = getRazorpayPaymentLink();
+    if (paymentLink) {
+      openExternalUrl(paymentLink, 'Could not open Razorpay payment.');
+      return;
+    }
+
+    const plan = planDetails[selectedPlan];
+    if (Platform.OS !== 'web') {
+      setPaymentLoading(true);
+      try {
+        const linkResponse = await createPaymentLink();
+        const url = linkResponse.data?.data?.url;
+        if (!url) throw new Error('Payment link missing');
+        openExternalUrl(url, 'Could not open Razorpay payment.');
+      } catch (error: any) {
+        Alert.alert(
+          'Payment unavailable',
+          error?.response?.data?.message || 'Could not start Razorpay payment.',
+        );
+      } finally {
+        setPaymentLoading(false);
+      }
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      const [ready, orderResponse] = await Promise.all([
+        loadRazorpayScript(),
+        paymentService.createRazorpayOrder({
+          plan: selectedPlan,
+          propertyCode: code,
+        }),
+      ]);
+
+      if (!ready || !(globalThis as any)?.Razorpay) {
+        const linkResponse = await createPaymentLink();
+        const url = linkResponse.data?.data?.url;
+        if (url) {
+          openExternalUrl(url, 'Could not open Razorpay payment.');
+          return;
+        }
+        Alert.alert('Payment unavailable', 'Could not load Razorpay checkout.');
+        return;
+      }
+
+      const paymentData = orderResponse.data?.data;
+      const checkout = new (globalThis as any).Razorpay({
+        key: paymentData?.keyId,
+        order_id: paymentData?.order?.id,
+        amount: (paymentData?.amount || plan.amount) * 100,
+        currency: 'INR',
+        name: 'ResaleExpert',
+        description: `${plan.label} - ${code}`,
+        image:
+          'https://resaleexpert.in/uploads/system/company_logo-1778756377340-827835566-Resale-Expert-Logo.png',
+        notes: {
+          property_code: code,
+          plan: selectedPlan,
+        },
+        theme: {
+          color: '#E6761D',
+        },
+        handler: () => {
+          setShowPricingModal(false);
+          Alert.alert('Payment successful', 'Your premium access is unlocked.');
+        },
+      });
+
+      checkout.open();
+    } catch (error: any) {
+      Alert.alert(
+        'Payment unavailable',
+        error?.response?.data?.message || 'Could not start Razorpay payment.',
+      );
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
   const openNearbyLocation = () => {
     const hasCoordinates = property?.latitude && property?.longitude;
-    const query = encodeURIComponent(
+    const destination = encodeURIComponent(
       hasCoordinates
         ? `${property.latitude},${property.longitude}`
         : propertyMapQuery || property?.location || 'Pune, Maharashtra',
     );
-    const webUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=current+location&destination=${destination}&travelmode=driving`;
     const mapUrl =
       Platform.OS === 'ios'
-        ? `maps://?q=${query}`
+        ? `https://maps.apple.com/?daddr=${destination}&dirflg=d`
         : Platform.OS === 'android'
-        ? `geo:0,0?q=${query}`
-        : webUrl;
+        ? `google.navigation:q=${destination}&mode=d`
+        : directionsUrl;
 
-    Linking.openURL(mapUrl).catch(() => Linking.openURL(webUrl));
+    openExternalUrl(mapUrl, 'Could not open route directions.');
   };
 
   const showPrevImage = () => {
@@ -490,7 +668,7 @@ const PropertyDetailScreen = ({
                 className={`flex-1 min-w-[180px] rounded-2xl border-2 p-5 ${
                   selectedPlan === '5views'
                     ? 'border-blue-500 bg-blue-50'
-                    : 'border-orange-200'
+                    : 'border-slate-100'
                 }`}
               >
                 <View className="items-center mb-4">
@@ -540,7 +718,7 @@ const PropertyDetailScreen = ({
                 className={`flex-1 min-w-[180px] rounded-2xl border-2 p-5 relative ${
                   selectedPlan === '12views'
                     ? 'ring-2 ring-purple-500 border-purple-500'
-                    : 'border-orange-200'
+                    : 'border-slate-100'
                 }`}
               >
                 <View className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-600 px-4 py-1 rounded-full">
@@ -599,7 +777,7 @@ const PropertyDetailScreen = ({
                 className={`flex-1 min-w-[180px] rounded-2xl border-2 p-5 ${
                   selectedPlan === 'unlimited'
                     ? 'border-orange-500 bg-orange-50'
-                    : 'border-orange-200'
+                    : 'border-slate-100'
                 }`}
               >
                 <View className="items-center mb-4">
@@ -669,10 +847,19 @@ const PropertyDetailScreen = ({
                     : '1,999'}
                 </Text>
               </View>
-              <TouchableOpacity className="bg-[#E6761D] py-4 rounded-xl flex-row items-center justify-center gap-2">
-                <CreditCard size={20} color="white" />
+              <TouchableOpacity
+                onPress={handleRazorpayPayment}
+                disabled={paymentLoading}
+                activeOpacity={0.86}
+                className="bg-[#E6761D] py-4 rounded-xl flex-row items-center justify-center gap-2"
+              >
+                {paymentLoading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <CreditCard size={20} color="white" />
+                )}
                 <Text className="text-white font-semibold text-lg">
-                  Pay with Razorpay
+                  {paymentLoading ? 'Opening Razorpay...' : 'Pay with Razorpay'}
                 </Text>
               </TouchableOpacity>
               <View className="flex-row justify-center gap-4 mt-4">
@@ -741,7 +928,7 @@ const PropertyDetailScreen = ({
                 onChangeText={setMsgName}
                 placeholder="Enter your name"
                 placeholderTextColor="#9ca3af"
-                className="border border-orange-300 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30"
+                className="rounded-xl px-4 py-3 text-sm text-gray-900 bg-white transition-all hover:bg-orange-50/30"
               />
             </View>
 
@@ -755,7 +942,7 @@ const PropertyDetailScreen = ({
                 placeholder="Enter your phone number"
                 placeholderTextColor="#9ca3af"
                 keyboardType="phone-pad"
-                className="border border-orange-300 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30"
+                className="rounded-xl px-4 py-3 text-sm text-gray-900 bg-white transition-all hover:bg-orange-50/30"
               />
             </View>
 
@@ -770,7 +957,7 @@ const PropertyDetailScreen = ({
                 placeholderTextColor="#9ca3af"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                className="border border-orange-300 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30"
+                className="rounded-xl px-4 py-3 text-sm text-gray-900 bg-white transition-all hover:bg-orange-50/30"
               />
             </View>
 
@@ -786,7 +973,7 @@ const PropertyDetailScreen = ({
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
-                className="border border-orange-300 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white transition-all hover:border-orange-500 hover:bg-orange-50/30 min-h-[100px]"
+                className="rounded-xl px-4 py-3 text-sm text-gray-900 bg-white transition-all hover:bg-orange-50/30 min-h-[100px]"
               />
             </View>
 
@@ -898,8 +1085,14 @@ const PropertyDetailScreen = ({
 
   // Contact Cards
   const MobileContactBar = () => (
-    <View className="absolute bottom-0 left-0 right-0 z-50 p-3 pointer-events-none">
-      <View className="bg-white rounded-2xl shadow-lg p-3 pointer-events-auto mx-auto w-[95%] border border-orange-300 transition-all hover:border-orange-500 hover:shadow-xl">
+    <View
+      pointerEvents="box-none"
+      className="absolute bottom-0 left-0 right-0 z-50 p-3"
+    >
+      <View
+        pointerEvents="auto"
+        className="bg-white rounded-2xl shadow-lg p-3 mx-auto w-[95%] border border-orange-300 transition-all hover:shadow-xl"
+      >
         <View className="flex-row items-center gap-2 mb-2">
           <View className="w-8 h-8 rounded-full bg-blue-50 items-center justify-center">
             <Users size={16} color="#2563EB" />
@@ -914,6 +1107,8 @@ const PropertyDetailScreen = ({
         <View className="flex-row gap-2">
           <TouchableOpacity
             onPress={callExecutive}
+            activeOpacity={0.82}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             className="flex-1 flex-row items-center justify-center gap-1 bg-blue-50 py-2 rounded-lg"
           >
             <Phone size={14} color="#2563EB" />
@@ -921,6 +1116,8 @@ const PropertyDetailScreen = ({
           </TouchableOpacity>
           <TouchableOpacity
             onPress={openWhatsApp}
+            activeOpacity={0.82}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             className="flex-1 flex-row items-center justify-center gap-1 bg-green-50 py-2 rounded-lg"
           >
             <MessageCircle size={14} color="#16a34a" />
@@ -928,6 +1125,8 @@ const PropertyDetailScreen = ({
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setShowMessageModal(true)}
+            activeOpacity={0.82}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             className="flex-1 flex-row items-center justify-center gap-1 bg-purple-50 py-2 rounded-lg"
           >
             <MessageCircle size={14} color="#9333ea" />
@@ -939,7 +1138,7 @@ const PropertyDetailScreen = ({
   );
 
   const DesktopContactCard = () => (
-    <View className="bg-white rounded-xl border border-orange-300 p-4 sticky top-24 transition-all hover:border-orange-500 hover:shadow-xl">
+    <View className="bg-white rounded-xl border border-orange-300 p-4 sticky top-24 transition-all hover:shadow-xl">
       <View className="flex-row items-center gap-3 mb-3">
         <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center">
           <Users size={20} color="#2563EB" />
@@ -952,6 +1151,8 @@ const PropertyDetailScreen = ({
       <View className="grid grid-cols-2 gap-2">
         <TouchableOpacity
           onPress={callExecutive}
+          activeOpacity={0.82}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           className="flex-row items-center justify-center gap-2 bg-blue-50 py-2 rounded-lg"
         >
           <Phone size={14} color="#2563EB" />
@@ -959,6 +1160,8 @@ const PropertyDetailScreen = ({
         </TouchableOpacity>
         <TouchableOpacity
           onPress={openWhatsApp}
+          activeOpacity={0.82}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           className="flex-row items-center justify-center gap-2 bg-green-50 py-2 rounded-lg"
         >
           <MessageCircle size={14} color="#16a34a" />
@@ -966,6 +1169,8 @@ const PropertyDetailScreen = ({
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setShowMessageModal(true)}
+          activeOpacity={0.82}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           className="flex-row items-center justify-center gap-2 bg-purple-50 py-2 rounded-lg"
         >
           <MessageCircle size={14} color="#9333ea" />
@@ -973,6 +1178,8 @@ const PropertyDetailScreen = ({
         </TouchableOpacity>
         <TouchableOpacity
           onPress={messageExecutive}
+          activeOpacity={0.82}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           className="flex-row items-center justify-center gap-2 bg-gray-50 py-2 rounded-lg"
         >
           <MessageCircle size={14} color="#6B7280" />
@@ -1067,7 +1274,7 @@ const PropertyDetailScreen = ({
 
         <View className="p-3.5">
           <View className="flex-row gap-2 mb-3">
-            <View className="flex-1 bg-slate-50 rounded-xl px-2 py-2 border border-slate-100">
+            <View className="flex-1 bg-slate-50 rounded-xl px-2 py-2">
               <Text className="text-[10px] text-gray-500">Config</Text>
               <Text
                 className="text-xs font-bold text-gray-900 mt-0.5"
@@ -1076,7 +1283,7 @@ const PropertyDetailScreen = ({
                 {displayConfig}
               </Text>
             </View>
-            <View className="flex-1 bg-slate-50 rounded-xl px-2 py-2 border border-slate-100">
+            <View className="flex-1 bg-slate-50 rounded-xl px-2 py-2">
               <Text className="text-[10px] text-gray-500">Area</Text>
               <Text
                 className="text-xs font-bold text-gray-900 mt-0.5"
@@ -1085,7 +1292,7 @@ const PropertyDetailScreen = ({
                 {displayArea ? `${displayArea} sq ft` : 'N/A'}
               </Text>
             </View>
-            <View className="flex-1 bg-slate-50 rounded-xl px-2 py-2 border border-slate-100">
+            <View className="flex-1 bg-slate-50 rounded-xl px-2 py-2">
               <Text className="text-[10px] text-gray-500">Rate</Text>
               <Text
                 className="text-xs font-bold text-gray-900 mt-0.5"
@@ -1306,7 +1513,7 @@ const PropertyDetailScreen = ({
           >
             <View className={`${!isMobile ? 'flex-1' : 'w-full'}`}>
               {/* Property Description with Read more */}
-              <View className="bg-white rounded-xl p-4 mt-4 border border-orange-300 shadow-sm transition-all hover:border-orange-500 hover:shadow-lg">
+              <View className="bg-white rounded-xl border border-orange-300 p-4 mt-4 shadow-sm transition-all hover:shadow-lg">
                 <Text className="font-bold text-gray-900 text-lg mb-2">
                   Property Description
                 </Text>
@@ -1335,7 +1542,7 @@ const PropertyDetailScreen = ({
               </View>
 
               {/* Property Details Grid */}
-              <View className="bg-white rounded-xl border border-orange-300 mt-2 overflow-hidden transition-all hover:border-orange-500 hover:shadow-lg">
+              <View className="bg-white rounded-xl border border-orange-300 mt-2 overflow-hidden transition-all hover:shadow-lg">
                 <View className="px-4 pt-3">
                   <Text className="font-bold text-gray-900 text-lg">
                     Property Details
@@ -1345,10 +1552,10 @@ const PropertyDetailScreen = ({
                   {details.map((detail, idx) => (
                     <View
                       key={idx}
-                      className="w-1/2 border-b border-orange-200 p-3"
+                      className="w-1/2 p-3"
                     >
                       <View className="flex-row items-center gap-2">
-                        <View className="w-8 h-8 rounded-lg bg-gray-50 items-center justify-center border border-orange-200">
+                        <View className="w-8 h-8 rounded-lg bg-gray-50 items-center justify-center">
                           <detail.icon size={16} color="#9ca3af" />
                         </View>
                         <View className="flex-1">
@@ -1370,7 +1577,7 @@ const PropertyDetailScreen = ({
 
               {/* Amenities & Furnishing */}
               <View className="flex-row gap-3 mt-2">
-                <View className="flex-1 bg-white rounded-xl p-3 border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg">
+                <View className="flex-1 bg-white rounded-xl border border-orange-300 p-3 transition-all hover:shadow-lg">
                   <Text className="font-bold text-gray-900 mb-2 text-sm">
                     Amenities
                   </Text>
@@ -1399,7 +1606,7 @@ const PropertyDetailScreen = ({
                       ))}
                   </View>
                 </View>
-                <View className="flex-1 bg-white rounded-xl p-3 border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg">
+                <View className="flex-1 bg-white rounded-xl border border-orange-300 p-3 transition-all hover:shadow-lg">
                   <Text className="font-bold text-gray-900 mb-2 text-sm">
                     Furnishing Items
                   </Text>
@@ -1429,7 +1636,7 @@ const PropertyDetailScreen = ({
               </View>
 
               {/* AI Property Analysis */}
-              <View className="bg-white rounded-xl p-4 mt-2 border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg">
+              <View className="bg-white rounded-xl border border-orange-300 p-4 mt-2 transition-all hover:shadow-lg">
                 <View className="flex-row items-center gap-2 mb-3">
                   <Bot size={18} color="#7c3aed" />
                   <Text className="font-bold text-gray-900 text-base">
@@ -1469,7 +1676,7 @@ const PropertyDetailScreen = ({
               </View>
 
               {/* AI Recommendations with Blur/Unlock */}
-              <View className="bg-white rounded-xl p-4 mt-2 border border-orange-300 relative transition-all hover:border-orange-500 hover:shadow-lg">
+              <View className="bg-white rounded-xl border border-orange-300 p-4 mt-2 relative transition-all hover:shadow-lg">
                 <View className="flex-row items-center gap-2 mb-3">
                   <TrendingUp size={18} color="#2563EB" />
                   <Text className="font-bold text-gray-900 text-base">
@@ -1533,12 +1740,12 @@ const PropertyDetailScreen = ({
               </View>
 
               {/* Property Highlights */}
-              <View className="bg-white rounded-xl p-4 mt-2 border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg">
+              <View className="bg-white rounded-xl border border-orange-300 p-4 mt-2 transition-all hover:shadow-lg">
                 <Text className="font-bold text-gray-900 text-base mb-3">
                   Property Highlights
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
-                  <View className="w-[48%] h-12 rounded-xl border border-orange-300 px-3 flex-row transition-all hover:border-orange-500 hover:bg-orange-50/30 items-center justify-between">
+                  <View className="w-[48%] h-12 rounded-xl px-3 flex-row transition-all hover:bg-orange-50/30 items-center justify-between">
                     <View className="flex-row items-center gap-2">
                       <Bed size={16} color="#E6761D" />
                       <Text className="text-xs text-gray-600">Bedrooms</Text>
@@ -1547,7 +1754,7 @@ const PropertyDetailScreen = ({
                       {property?.bedrooms || 2}
                     </Text>
                   </View>
-                  <View className="w-[48%] h-12 rounded-xl border border-orange-300 px-3 flex-row transition-all hover:border-orange-500 hover:bg-orange-50/30 items-center justify-between">
+                  <View className="w-[48%] h-12 rounded-xl px-3 flex-row transition-all hover:bg-orange-50/30 items-center justify-between">
                     <View className="flex-row items-center gap-2">
                       <Bath size={16} color="#E6761D" />
                       <Text className="text-xs text-gray-600">Bathrooms</Text>
@@ -1556,7 +1763,7 @@ const PropertyDetailScreen = ({
                       {property?.bathrooms || 2}
                     </Text>
                   </View>
-                  <View className="w-[48%] h-12 rounded-xl border border-orange-300 px-3 flex-row transition-all hover:border-orange-500 hover:bg-orange-50/30 items-center justify-between">
+                  <View className="w-[48%] h-12 rounded-xl px-3 flex-row transition-all hover:bg-orange-50/30 items-center justify-between">
                     <View className="flex-row items-center gap-2">
                       <Car size={16} color="#E6761D" />
                       <Text className="text-xs text-gray-600">Parking</Text>
@@ -1565,7 +1772,7 @@ const PropertyDetailScreen = ({
                       {property?.parking || 1}
                     </Text>
                   </View>
-                  <View className="w-[48%] h-12 rounded-xl border border-orange-300 px-3 flex-row transition-all hover:border-orange-500 hover:bg-orange-50/30 items-center justify-between">
+                  <View className="w-[48%] h-12 rounded-xl px-3 flex-row transition-all hover:bg-orange-50/30 items-center justify-between">
                     <View className="flex-row items-center gap-2">
                       <Building2 size={16} color="#E6761D" />
                       <Text className="text-xs text-gray-600">Balcony</Text>
@@ -1578,7 +1785,7 @@ const PropertyDetailScreen = ({
               </View>
 
               {/* Smart EMI Calculator - exactly as HTML (with slider) */}
-              <View className="mt-2 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+              <View className="mt-2 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-orange-300">
                 <View className="flex-row items-center justify-between mb-3">
                   <View className="flex-row items-center">
                     <Calculator size={18} color="#1e3a8a" />
@@ -1627,7 +1834,7 @@ const PropertyDetailScreen = ({
 
                   {/* Loan Amount & Self Payment */}
                   <View className="flex-row gap-3 text-sm">
-                    <View className="flex-1 bg-white p-2 rounded border">
+                    <View className="flex-1 bg-white p-2 rounded">
                       <Text className="text-gray-600 text-xs">Loan Amount</Text>
                       <Text className="font-bold text-blue-700">
                         ₹{formatPrice(emiLoanAmount)}
@@ -1636,7 +1843,7 @@ const PropertyDetailScreen = ({
                         ({emiLoanPercent}% of property value)
                       </Text>
                     </View>
-                    <View className="flex-1 bg-white p-2 rounded border">
+                    <View className="flex-1 bg-white p-2 rounded">
                       <Text className="text-gray-600 text-xs">
                         Self Payment
                       </Text>
@@ -1707,7 +1914,7 @@ const PropertyDetailScreen = ({
                   </View>
 
                   {/* EMI Card with breakdown */}
-                  <View className="bg-white p-3 rounded-lg border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg">
+                  <View className="bg-white p-3 rounded-lg border border-orange-300 transition-all hover:shadow-lg">
                     <View className="flex-row items-center justify-between mb-1">
                       <Text className="text-gray-700">Monthly EMI</Text>
                       <Text className="text-2xl font-bold text-[#E6761D]">
@@ -1747,7 +1954,7 @@ const PropertyDetailScreen = ({
                         setEmiTenure(15);
                         setEmiInterestRate(8.4);
                       }}
-                      className="flex-1 text-xs p-2 bg-white border rounded items-center"
+                      className="flex-1 text-xs p-2 bg-white rounded items-center"
                     >
                       <Text className="font-medium">15 Years</Text>
                       <Text className="text-gray-600 text-[11px]">8.4%</Text>
@@ -1760,7 +1967,7 @@ const PropertyDetailScreen = ({
                         setEmiTenure(20);
                         setEmiInterestRate(8.5);
                       }}
-                      className="flex-1 text-xs p-2 bg-white border rounded items-center"
+                      className="flex-1 text-xs p-2 bg-white rounded items-center"
                     >
                       <Text className="font-medium">20 Years</Text>
                       <Text className="text-gray-600 text-[11px]">8.5%</Text>
@@ -1773,7 +1980,7 @@ const PropertyDetailScreen = ({
                         setEmiTenure(25);
                         setEmiInterestRate(8.6);
                       }}
-                      className="flex-1 text-xs p-2 bg-white border rounded items-center"
+                      className="flex-1 text-xs p-2 bg-white rounded items-center"
                     >
                       <Text className="font-medium">25 Years</Text>
                       <Text className="text-gray-600 text-[11px]">8.6%</Text>
@@ -1800,12 +2007,12 @@ const PropertyDetailScreen = ({
               </View>
 
               {/* Price Breakdown */}
-              <View className="bg-white rounded-xl p-4 mt-2 border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg">
+              <View className="bg-white rounded-xl border border-orange-300 p-4 mt-2 transition-all hover:shadow-lg">
                 <Text className="font-bold text-gray-900 text-base mb-3">
                   Price Breakdown
                 </Text>
                 <View className="space-y-2">
-                  <View className="flex-row justify-between py-2 border-b border-orange-200">
+                  <View className="flex-row justify-between py-2">
                     <Text className="text-gray-600">Base Price</Text>
                     <Text className="font-bold text-gray-900">
                       ₹{formatPrice(price)}
@@ -1857,7 +2064,7 @@ const PropertyDetailScreen = ({
               </View>
 
               {/* AI Investment Analysis with Unlock */}
-              <View className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mt-2 relative overflow-hidden">
+              <View className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-orange-300 p-4 mt-2 relative overflow-hidden">
                 <View className="flex-row items-center gap-2 mb-3">
                   <Crown size={18} color="#7c3aed" />
                   <Text className="font-bold text-gray-900 text-base">
@@ -1916,7 +2123,7 @@ const PropertyDetailScreen = ({
               </View>
 
               {/* Location & Connectivity */}
-              <View className="bg-white rounded-xl shadow-sm p-4 mt-2 border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg">
+              <View className="bg-white rounded-xl border border-orange-300 shadow-sm p-4 mt-2 transition-all hover:shadow-lg">
                 <View className="flex-row items-center gap-2 mb-3">
                   <MapPin size={18} color="#E6761D" />
                   <Text className="font-bold text-[#0b3856] text-base">
@@ -1924,7 +2131,7 @@ const PropertyDetailScreen = ({
                   </Text>
                 </View>
                 <View className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <View className="rounded-lg p-3 bg-[#0b3856]/5 ring-1 ring-[#0b3856]/20">
+                  <View className="rounded-lg p-3 bg-[#0b3856]/5">
                     <Text className="font-semibold text-[#0b3856] mb-2 text-sm">
                       🚆 Transportation
                     </Text>
@@ -1949,7 +2156,7 @@ const PropertyDetailScreen = ({
                       </View>
                     </View>
                   </View>
-                  <View className="rounded-lg p-3 bg-[#E6761D]/10 ring-1 ring-[#E6761D]/20">
+                  <View className="rounded-lg p-3 bg-[#E6761D]/10">
                     <Text className="font-semibold text-[#E6761D] mb-2 text-sm">
                       🏥 Essential Services
                     </Text>
@@ -1967,7 +2174,7 @@ const PropertyDetailScreen = ({
               </View>
 
               {/* Similar Properties - vertical list on mobile, grid on tablet/desktop */}
-              <View className="mt-5 bg-white rounded-2xl p-4 border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg shadow-sm">
+              <View className="mt-5 bg-white rounded-2xl border border-orange-300 p-4 transition-all hover:shadow-lg shadow-sm">
                 <View className="flex-row items-center justify-between mb-3">
                   <View>
                     <Text className="font-black text-[#0b3856] text-lg">
@@ -1977,14 +2184,14 @@ const PropertyDetailScreen = ({
                       Choose another property to open its full details
                     </Text>
                   </View>
-                  <View className="bg-orange-50 px-2.5 py-1 rounded-full border border-orange-300">
+                  <View className="bg-orange-50 px-2.5 py-1 rounded-full">
                     <Text className="text-[#E6761D] text-xs font-black">
                       {visibleSimilar.length}
                     </Text>
                   </View>
                 </View>
                 {visibleSimilar.length === 0 ? (
-                  <View className="bg-white rounded-xl p-4 items-center border border-orange-300 transition-all hover:border-orange-500 hover:bg-orange-50/30">
+                  <View className="bg-white rounded-xl p-4 items-center transition-all hover:bg-orange-50/30">
                     <Text className="text-gray-500 text-sm font-medium">
                       No similar properties available right now.
                     </Text>
@@ -2015,7 +2222,7 @@ const PropertyDetailScreen = ({
             {!isMobile && (
               <View className="w-80 space-y-4">
                 <DesktopContactCard />
-                <View className="bg-white rounded-xl p-4 border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg">
+                <View className="bg-white rounded-xl border border-orange-300 p-4 transition-all hover:shadow-lg">
                   <Text className="font-bold text-gray-900 mb-3">
                     Property Activity
                   </Text>
@@ -2055,7 +2262,7 @@ const PropertyDetailScreen = ({
                     </View>
                   </View>
                 </View>
-                <View className="bg-white rounded-xl p-4 border border-orange-300 transition-all hover:border-orange-500 hover:shadow-lg">
+                <View className="bg-white rounded-xl border border-orange-300 p-4 transition-all hover:shadow-lg">
                   <Text className="font-bold text-gray-900 mb-3">
                     Property Highlights
                   </Text>
@@ -2098,7 +2305,7 @@ const PropertyDetailScreen = ({
 
           {/* Customer Reviews - only on mobile */}
           {isMobile && (
-            <View className="bg-white rounded-xl shadow-sm p-4 mt-4 ring-1 ring-gray-100">
+            <View className="bg-white rounded-xl border border-orange-300 shadow-sm p-4 mt-4">
               <Text className="font-bold text-gray-900 text-base mb-3">
                 Customer Reviews
               </Text>
@@ -2114,7 +2321,7 @@ const PropertyDetailScreen = ({
                 <Text className="text-gray-500 text-xs ml-2">(24 reviews)</Text>
               </View>
               <View className="space-y-3">
-                <View className="border border-orange-300 rounded-lg p-3 transition-all hover:border-orange-500 hover:bg-orange-50/30">
+                <View className="rounded-lg p-3 transition-all hover:bg-orange-50/30">
                   <View className="flex-row justify-between mb-1">
                     <View className="flex-row items-center gap-1">
                       <View className="w-6 h-6 rounded-full bg-blue-100 items-center justify-center">
@@ -2136,7 +2343,7 @@ const PropertyDetailScreen = ({
                     Excellent property with great amenities. Highly recommended!
                   </Text>
                 </View>
-                <View className="border border-orange-300 rounded-lg p-3 transition-all hover:border-orange-500 hover:bg-orange-50/30">
+                <View className="rounded-lg p-3 transition-all hover:bg-orange-50/30">
                   <View className="flex-row justify-between mb-1">
                     <View className="flex-row items-center gap-1">
                       <View className="w-6 h-6 rounded-full bg-blue-100 items-center justify-center">
@@ -2158,7 +2365,7 @@ const PropertyDetailScreen = ({
                     Beautiful location and well-maintained property.
                   </Text>
                 </View>
-                <View className="border border-orange-300 rounded-lg p-3 transition-all hover:border-orange-500 hover:bg-orange-50/30">
+                <View className="rounded-lg p-3 transition-all hover:bg-orange-50/30">
                   <View className="flex-row justify-between mb-1">
                     <View className="flex-row items-center gap-1">
                       <View className="w-6 h-6 rounded-full bg-blue-100 items-center justify-center">
