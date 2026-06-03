@@ -84,16 +84,23 @@ const MaintenanceScreen = ({ status, onRetry }: { status: PlatformStatus; onRetr
 
 export default function App() {
   const [status, setStatus] = useState<PlatformStatus | null>(null);
-  const [checkingStatus, setCheckingStatus] = useState(true);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   const checkPlatformStatus = async () => {
+    const controller =
+      typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeout = setTimeout(() => controller?.abort(), 2500);
+
     try {
-      const response = await fetch(`${API_URL}/status`);
+      const response = await fetch(`${API_URL}/status`, {
+        signal: controller?.signal,
+      } as RequestInit);
       const json = await response.json();
       setStatus(json.data || { maintenanceMode: false });
     } catch {
-      setStatus({ maintenanceMode: false });
+      setStatus((current) => current || { maintenanceMode: false });
     } finally {
+      clearTimeout(timeout);
       setCheckingStatus(false);
     }
   };
@@ -104,7 +111,7 @@ export default function App() {
       setCheckingStatus(false);
     });
 
-    checkPlatformStatus().finally(() => setCheckingStatus(false));
+    checkPlatformStatus();
     const interval = process.env.NODE_ENV === 'test'
       ? undefined
       : setInterval(checkPlatformStatus, 15000);

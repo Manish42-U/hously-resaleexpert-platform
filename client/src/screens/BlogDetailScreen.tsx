@@ -24,6 +24,9 @@ import {
 import Footer from '../components/RealEstate/Footer';
 import { blogService, contactService } from '../services/api';
 
+const FALLBACK_BLOG_IMAGE =
+  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
+
 const likedBlogIds = new Set<string>();
 const savedBlogIds = new Set<string>();
 const followedAuthors = new Set<string>();
@@ -70,7 +73,9 @@ const BlogDetailScreen = ({ blog, recent = [], onBack, onOpenBlog }: any) => {
     : ['real estate', 'finance', 'property'];
   const image =
     blog?.image_url ||
-    'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&w=1200';
+    blog?.imageUrl ||
+    blog?.image ||
+    FALLBACK_BLOG_IMAGE;
   const initialLikes = useMemo(
     () => Number(blog?.likes || blog?.likes_count || 0),
     [blog?.likes, blog?.likes_count],
@@ -81,6 +86,7 @@ const BlogDetailScreen = ({ blog, recent = [], onBack, onOpenBlog }: any) => {
   const [likeCount, setLikeCount] = useState(
     blogLikeCounts.get(blogKey) ?? initialLikes,
   );
+  const [heroImage, setHeroImage] = useState(image);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState('');
   const [subscribing, setSubscribing] = useState(false);
@@ -100,9 +106,10 @@ const BlogDetailScreen = ({ blog, recent = [], onBack, onOpenBlog }: any) => {
     setSaved(savedBlogIds.has(blogKey));
     setFollowed(followedAuthors.has(authorName));
     setLikeCount(blogLikeCounts.get(blogKey) ?? initialLikes);
+    setHeroImage(image);
     setNewsletterStatus('');
     setCommentStatus('');
-  }, [authorName, blogKey, initialLikes]);
+  }, [authorName, blogKey, image, initialLikes]);
 
   useEffect(() => {
     let mounted = true;
@@ -296,9 +303,10 @@ const BlogDetailScreen = ({ blog, recent = [], onBack, onOpenBlog }: any) => {
           <View className="bg-white rounded-2xl overflow-hidden shadow-xl border-2 border-orange-300 transition-all hover:border-orange-500 hover:shadow-2xl">
             <View className="h-72 bg-gray-900">
               <Image
-                source={{ uri: image }}
+                source={{ uri: heroImage }}
                 className="w-full h-full"
                 resizeMode="cover"
+                onError={() => setHeroImage(FALLBACK_BLOG_IMAGE)}
               />
               <LinearGradient
                 colors={['transparent', 'rgba(0,0,0,0.65)']}
@@ -504,7 +512,13 @@ const BlogDetailScreen = ({ blog, recent = [], onBack, onOpenBlog }: any) => {
                 className="flex-row gap-3 py-3 border-b border-orange-100 transition-all hover:bg-orange-50/30 hover:px-2 hover:rounded-xl"
               >
                 <Image
-                  source={{ uri: item.image_url || image }}
+                  source={{
+                    uri:
+                      item.image_url ||
+                      item.imageUrl ||
+                      item.image ||
+                      FALLBACK_BLOG_IMAGE,
+                  }}
                   className="w-16 h-14 rounded-lg"
                   resizeMode="cover"
                 />

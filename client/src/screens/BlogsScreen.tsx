@@ -24,6 +24,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import Footer from '../components/RealEstate/Footer';
 import { blogService } from '../services/api';
 
+const FALLBACK_BLOG_IMAGE =
+  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
+
 const categories = [
   'All',
   'Real Estate',
@@ -52,6 +55,13 @@ interface Blog {
   featured: boolean;
 }
 
+const resolveBlogImage = (blog: any) => {
+  const image = String(
+    blog?.image_url || blog?.imageUrl || blog?.image || '',
+  ).trim();
+  return image || FALLBACK_BLOG_IMAGE;
+};
+
 const normalizeBlog = (blog: any): Blog => ({
   id: Number(blog.id),
   title: blog.title || 'Untitled Blog',
@@ -63,7 +73,7 @@ const normalizeBlog = (blog: any): Blog => ({
   read_time: blog.read_time || blog.readTime || '5 min read',
   category: blog.category || 'Real Estate',
   tags: Array.isArray(blog.tags) ? blog.tags : [],
-  image_url: blog.image_url || blog.imageUrl || '',
+  image_url: resolveBlogImage(blog),
   featured: Boolean(blog.featured),
 });
 
@@ -146,6 +156,14 @@ const BlogsScreen = ({
 
   const featuredBlog = blogs.find(b => b.featured) ?? blogs[0];
 
+  const handleBlogImageError = (id: number) => {
+    setBlogs(current =>
+      current.map(blog =>
+        blog.id === id ? { ...blog, image_url: FALLBACK_BLOG_IMAGE } : blog,
+      ),
+    );
+  };
+
   // ─── Helper: format date ────────────────────────────────────────────
   const formatDate = (blog: Blog) => {
     if (blog.date) return blog.date;
@@ -193,6 +211,7 @@ const BlogsScreen = ({
             <Image
               source={{ uri: featuredBlog.image_url }}
               style={styles.featuredImage as ImageStyle}
+              onError={() => handleBlogImageError(featuredBlog.id)}
             />
             <View style={styles.featuredOverlay} />
             <View style={styles.featuredContent}>
@@ -311,6 +330,7 @@ const BlogsScreen = ({
                   <Image
                     source={{ uri: blog.image_url }}
                     style={styles.cardImage as ImageStyle}
+                    onError={() => handleBlogImageError(blog.id)}
                   />
                   <View style={styles.cardCategoryBadge}>
                     <Text style={styles.cardCategoryText}>{blog.category}</Text>
