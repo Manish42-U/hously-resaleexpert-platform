@@ -141,6 +141,12 @@ export const blogService = {
   delete: (id: string | number) => api.delete(`/blogs/${id}`),
 };
 
+export const warmPublicApi = () =>
+  Promise.allSettled([
+    api.get('/properties', { suppressErrorLog: true } as any),
+    api.get('/blogs', { suppressErrorLog: true } as any),
+  ]);
+
 export const uploadService = {
   uploadImage: (file: string, folder?: string) =>
     api.post('/uploads/image', { file, folder }, { timeout: 60000 }),

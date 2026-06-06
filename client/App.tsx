@@ -3,7 +3,7 @@ import './global.css';
 import AppNavigator from './src/navigation/AppNavigator';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ActivityIndicator, Linking, Text, TouchableOpacity, View } from 'react-native';
-import { API_URL, subscribeToMaintenance } from './src/services/api';
+import { API_URL, subscribeToMaintenance, warmPublicApi } from './src/services/api';
 import { COLORS } from './src/styles/theme';
 
 type PlatformStatus = {
@@ -112,6 +112,7 @@ export default function App() {
     });
 
     checkPlatformStatus();
+    warmPublicApi();
     const interval = process.env.NODE_ENV === 'test'
       ? undefined
       : setInterval(checkPlatformStatus, 15000);

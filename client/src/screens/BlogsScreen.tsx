@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   View,
@@ -92,15 +92,16 @@ const BlogsScreen = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const refreshSpin = useRef(new Animated.Value(0)).current;
+  const didMountSearchEffect = useRef(false);
 
-  const spinRefreshIcon = () => {
+  const spinRefreshIcon = useCallback(() => {
     refreshSpin.setValue(0);
     Animated.timing(refreshSpin, {
       toValue: 1,
       duration: 650,
       useNativeDriver: true,
     }).start();
-  };
+  }, [refreshSpin]);
 
   const refreshRotate = refreshSpin.interpolate({
     inputRange: [0, 1],
@@ -108,7 +109,7 @@ const BlogsScreen = ({
   });
 
   // ─── Fetch blogs from API ───────────────────────────────────────────
-  const fetchBlogs = async () => {
+  const fetchBlogs = useCallback(async () => {
     spinRefreshIcon();
     setLoading(true);
     setError(null);
@@ -138,7 +139,7 @@ const BlogsScreen = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeCategory, searchQuery, spinRefreshIcon]);
 
   useEffect(() => {
     fetchBlogs();
@@ -147,6 +148,11 @@ const BlogsScreen = ({
 
   // Debounced search — fires 500ms after user stops typing
   useEffect(() => {
+    if (!didMountSearchEffect.current) {
+      didMountSearchEffect.current = true;
+      return;
+    }
+
     const timer = setTimeout(() => {
       fetchBlogs();
     }, 500);
